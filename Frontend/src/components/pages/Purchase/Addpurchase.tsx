@@ -109,7 +109,8 @@ const Addpurchase = () => {
     resolver: zodResolver(purchaseSchema),defaultValues: {
       workorder_date: new Date(), 
       po_date: new Date(), 
-    }
+    },
+    mode:"onChange"
   });
 
   const [articles, setArticles] = useState<any>([]);
@@ -163,9 +164,11 @@ const Addpurchase = () => {
   const [articleNoId, setArticleNoId] = useState<number | null>(null);
   const [Id,setId] = useState('')
   const [po_fy,setPo_fy] = useState('')
-  
+  const [callTable,setcallTable] = useState(false)
+
   const submit = async (data: any) => {
-    const payload = {  
+    
+    const payload = {   
       Id:editId,
       po_number: poNumber,
       po_num_id: poNumId,
@@ -180,11 +183,12 @@ const Addpurchase = () => {
       workorder_date: moment(data.workorder_date).format("YYYY-MM-DD"),
     };
     console.log("payload", payload);
-    
-    try{
+    setcallTable(true) //Helper state for table
+    try{    
       const addPurchaseorder = await addpurchaseorder(payload);
        const redirectId = addPurchaseorder.rows[0].id
-        console.log('res add',addPurchaseorder);
+      
+        console.log('res add',addPurchaseorder); 
     if (addPurchaseorder?.rows?.length > 0) {
       setLoader(true)
       setPo_fy("PO number "+addPurchaseorder.rows[0].po_fy)
@@ -195,45 +199,43 @@ const Addpurchase = () => {
     }
 
     if (addPurchaseorder.data === 200) {
-      form.reset({  
-        article_id:'',
-        color:'', 
-        size:'',
-        ratio:'',         
-        color_quantity:''
-      })
-      setLoader(true)  
-      SetNewArticle(true)    
+      form.setValue('article_id','')
+      form.setValue('vendor_id','')
+      form.setValue('size','')
+      form.setValue('color_quantity','')
+      setLoader(true)   
+      SetNewArticle(true)     
       setLoader(false)
       try {
         CustomToast(200, "Data successfuly added");
-            
         navigate(`/editPO/${redirectId}`)
+        fetchPOD()
+        
       } catch (error) {
         CustomToast(500, "Error in saving data");
       }
     }}catch(error){
+      console.log('this is error',error);
       CustomToast(200,'Updated')
     }
-  };
-  const errors = () => {
-    console.log("THis are errors", form.formState.errors);
   };
 
   const [loader, setLoader] = useState(true);  
   const [po_num, setPo_num] = useState("");
-
+   
+  const artID = form.watch('article_id') 
+  console.log('article id=>',artID);
   const fetchSingle = async (id: number) => {
     const resPO = await fetchsinglePO(editId);
-    
-    const message =
+    console.log('single',resPO);
+    const message =  
       typeof resPO.message === "string"
         ? JSON.parse(resPO.message)
         : resPO.message;
     setPo_num("PO number :"+message.po_fy);
     form.reset({
-      purchase_number: message.po_fy
-      ,
+      article_id : message.articleid,   
+      purchase_number: message.po_fy,
       vendor_id: message.vendor_id,
       remarks: message.remarks, 
       po_date: message.po_date ? new Date(message.po_date) : null,
@@ -247,10 +249,9 @@ const Addpurchase = () => {
     } else {
       setLoader(false);
     }
-  }, []);
+  }, [editId]);
 
   useEffect(() => {
-    errors();
     getYear();
   }, []);
 
@@ -261,21 +262,26 @@ const Addpurchase = () => {
     const numPacks = quantities.map(item => item.quantity).join(',');
     form.setValue('num_packs', numPacks);
     
-  }
+  } 
   const [podTable, setPodtable] = useState<any>([]);
-
+ 
   const fetchPOD = async () => {
-    const tab = await fetchPODtable(editId);    
     
-    setLoader(true)
-    setPodtable(tab.message); 
-    setLoader(false ) 
-    
-  };
+    try{
+      const tab = await fetchPODtable(editId) 
+      console.log('it runs');
+      setPodtable(tab.message);       
+    }catch(error){
+      
+      console.log('PROBLEM IS',error);   
+    }   
+  }; 
 
-  useEffect(() => {
-    fetchPOD();
-  }, []);
+  useEffect(() => { 
+    if(editId){
+      fetchPOD();    
+    }
+  }, [editId,callTable]);
   
   //POD table
 
@@ -283,18 +289,24 @@ const Addpurchase = () => {
     id:number,
     no: number;
     article_number: number;
-    brand_name: string;
+    brand_name: string; 
     category_name: string;
     pieces: number;
-    serial: number;
+    serial: number;  
     subcategory_name: string;
-    vendor_name: string;
+    vendor_name: string; 
   }
 
   const handleDelete = async(id:number)=>{
     try{              
       const del = await deletePO(id)     
       fetchPOD()   
+      if (podTable.length === 1) {
+        setPodtable([])
+      }
+      if (podTable.length === 0) {
+        setPodtable([])
+      }
       if(del.statusCode === 200){
         CustomToast(200,'Successfully deleted')
       }
@@ -390,7 +402,7 @@ const Addpurchase = () => {
     );
   }
    
-  return (
+  return ( 
     <div className="">
       <Card className="w-[100%]">
         <CardHeader>
@@ -421,7 +433,7 @@ const Addpurchase = () => {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> 
               <FormField
                 control={form.control}
                 name="vendor_id"
@@ -488,12 +500,12 @@ const Addpurchase = () => {
                           field.onChange(value);
                           setarticlefield(true);
                           getSingleArticle(Number(value));
-                          
-                          console.log(value);
+                          console.log('my value',value);
                         }}
+                        value={field.value}
                       >
                         <SelectTrigger className="w-52">
-                          <SelectValue placeholder="Select Article" />
+                          <SelectValue placeholder="Select Article" defaultValue={field.value}/>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>

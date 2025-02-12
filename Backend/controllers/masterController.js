@@ -2489,7 +2489,7 @@ const addPurchaseOrder = async (req, res) => {
     article_no_id = article_no_id === "" ? null : article_no_id;
     article_id = article_id === "" ? null : article_id;
     num_packs = num_packs === "" ? null : num_packs;
-    workorder_id = isNaN(workorder_id) ? null : workorder_id;  // Correct validation for NaN
+    workorder_id = isNaN(workorder_id) ? null : workorder_id; 
     workorder_date = workorder_date === "" ? null : workorder_date;
 
     if (po_number === 'ADD') {
@@ -2507,7 +2507,7 @@ const addPurchaseOrder = async (req, res) => {
         INSERT INTO purchase_number 
         (purchase_number, po_fy, financial_year_id, vendor_id, po_date, remarks) 
         VALUES ($1, $2, $3, $4, $5, $6) 
-        RETURNING id, purchase_number, po_fy
+        RETURNING *
       `;
       const addParam = [rightPo, poNumber, Generated_po_num.financial_year_id, vendor_id, po_date, remarks];
       const { rows } = await client.query(adQuery, addParam);
@@ -2529,10 +2529,10 @@ const addPurchaseOrder = async (req, res) => {
         return res.status(400).json({ message: 'Error inserting data into PO_detail table' });
       }
 
-      return res.status(200).json({ message: 'Successfully added data', data: 200, rows });
+      return res.status(200).json({ message: 'Successfully added data in pod', data: 200, rows });
 
     } else {
-      // Get latest purchase number (if updating)
+      
       const { rows: currentPO } = await client.query('SELECT * FROM purchase_number ORDER BY id DESC LIMIT 1');
       console.log('currpo', currentPO[0].id);
 
@@ -2559,14 +2559,14 @@ const addPurchaseOrder = async (req, res) => {
             );
     
             if (updatePO.length > 0) {
-              return res.status(200).json({ message: 'Details updated', data: 200, updatePO });
+              return res.status(200).json(new ApiResponse(200,updatePO,'Data Updated success'));
             }
           }
           
         }
 
       }
-      const { rows: upd } = await client.query(
+      const { rows } = await client.query(
         `INSERT INTO purchase_order_details
           (po_number_id, article_id, num_packs, work_order_status_id, work_order_date, size_ratio)
           VALUES ($1, $2, $3, $4, $5, $6)
@@ -2574,15 +2574,15 @@ const addPurchaseOrder = async (req, res) => {
           DO UPDATE SET
             num_packs = EXCLUDED.num_packs,
             size_ratio = EXCLUDED.size_ratio
-          RETURNING *`,
+          RETURNING po_number_id as id`,
         [currentPO[0].id, article_id, num_packs, workorder_id, workorder_date, size_ratio]
       );
 
-      if (upd.length === 0) {
+      if (rows.length === 0) {
         return res.status(400).json({ message: 'Error inserting data into PO_detail table' });
       }
 
-      return res.status(200).json({ message: 'Successfully added data', data: 200, upd });
+      return res.status(200).json({ message: 'Successfully added data', data: 200, rows });
     }
   } catch (error) {
     console.error("This is error", error);
@@ -2785,18 +2785,40 @@ const fetchSinglePo = async (req, res) => {
 
   const client = await pool.connect();
 
+  const {rows:fetchFromPOD} = await client.query('SELECT * FROM purchase_order_details where id = $1',[id])
+  console.log('pod',fetchFromPOD);
+  if(fetchFromPOD.length > 0){
+    const {rows:podData} = await client.query(`
+     SELECT 
+     PURCHASE_NUMBER.PURCHASE_NUMBER,
+     PURCHASE_NUMBER.PO_FY,
+     PURCHASE_NUMBER.VENDOR_ID,
+     PURCHASE_NUMBER.PO_DATE,
+    PURCHASE_NUMBER.REMARKS,
+    ARTICLES.id as articleID,
+    ARTICLES.ARTICLE_NUMBER AS ARTICLE_NUM
+    FROM PURCHASE_ORDER_DETAILS
+    INNER JOIN PURCHASE_NUMBER 
+    ON PURCHASE_ORDER_DETAILS.PO_NUMBER_ID = PURCHASE_NUMBER.ID
+    INNER JOIN ARTICLES 
+    ON PURCHASE_ORDER_DETAILS.ARTICLE_ID = ARTICLES.ID
+    WHERE PURCHASE_ORDER_DETAILS.ID = ${id}`)
+    if(podData.length > 0){
+      return res.status(200).json(new ApiResponse(200,'Succefully fetched single POD table item',podData[0]))
+    }
+  }
   const fetchQuery = 'SELECT PURCHASE_NUMBER, PO_FY, PO_DATE, REMARKS, VENDOR_ID FROM PURCHASE_NUMBER WHERE id = $1';
 
   try {
     const { rows } = await client.query(fetchQuery, [id]);
     
     if (rows.length > 0) {
-      return res.status(200).json(new ApiResponse(200, 'Single PO fetched successfully', rows[0])); // Return only one object
+      return res.status(200).json(new ApiResponse(200, 'Single PO fetched successfully', rows[0])); 
     } else {
       return res.status(400).json(new ApiError(400, 'No PO found with this ID'));
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:YY', error);
     return res.status(500).json(new ApiError(500, 'Error in fetchSinglePO API', error.message));
   } finally {
     client.release(); 
