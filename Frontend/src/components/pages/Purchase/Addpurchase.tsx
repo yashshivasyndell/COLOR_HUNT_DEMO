@@ -75,7 +75,7 @@ const Addpurchase = () => {
     brand: z.string().or(z.number()).or(z.null()).optional(),
     serial: z.string().or(z.number()).or(z.null()).optional(),
     style_description: z.string().or(z.number()).or(z.null()).optional(),
-    color: z.array(z.string()).optional(),
+    color: z.array(z.string()),
     size: z.array(z.string()),
     ratio: z.string({ message: "Please enter valid ratio for size" }).refine(
       (val) => {
@@ -106,18 +106,28 @@ const Addpurchase = () => {
   const [selectedOptions, setSelectedOptions] = useState<any>([]);
 
   const form = useForm<z.infer<typeof purchaseSchema>>({
-    resolver: zodResolver(purchaseSchema),defaultValues: {
-      workorder_date: new Date(), 
-      po_date: new Date(), 
+    resolver: zodResolver(purchaseSchema),
+    defaultValues: {
+      workorder_date: new Date(),
+      po_date: new Date(),
+      color: [], // Default as empty array
+      color_quantity: [], // Default as empty array
+      size: [], // Default as empty array
+      ratio: "", // Default as empty string or appropriate default
+      article_id: "", 
+      vendor_id: "",
+      remarks: "",
+      workorder_id: "",
     },
-    mode:"onChange"
+    mode: "onChange",
   });
+  
 
   const [articles, setArticles] = useState<any>([]);
   const [articlefield, setarticlefield] = useState(false);
   const [vendor, setVendor] = useState<any>([]);
   const [colorQuant, setColorQuant] = useState(false);
-  const [color, setColor] = useState<any>([]);
+  const [colors, setColor] = useState<any>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<any>([]);
   const [workorder, setWorkorder] = useState([]);
@@ -128,6 +138,7 @@ const Addpurchase = () => {
     const vendor = await fetchvendors();
     setVendor(vendor.message);
     const colors = await fetchColor();
+    console.log('col',colors);
     setColor(colors.data);
     
     const sizes = await fetchSize();
@@ -165,15 +176,23 @@ const Addpurchase = () => {
   const [Id,setId] = useState('')
   const [po_fy,setPo_fy] = useState('')
   const [callTable,setcallTable] = useState(false)
+ 
+  // const artie = form.watch('article_id')
+  // const vend = form.watch('article_id')
+  // const col = form.watch('color')
+  // console.log('Article',artie);
+  // console.log('Vendor',artie);
+  // console.log('Colors',artie);
 
   const submit = async (data: any) => {
-    
     const payload = {   
       Id:editId,
       po_number: poNumber,
       po_num_id: poNumId,
       size_ratio:data.ratio,
       article_no_id: articleNoId,
+      color:data.color,
+      size:data.size,
       article_id: parseInt(data.article_id),
       po_date: moment(data.po_date).format("YYYY-MM-DD"),
       num_packs: (data.num_packs),
@@ -199,10 +218,17 @@ const Addpurchase = () => {
     }
 
     if (addPurchaseorder.data === 200) {
-      form.setValue('article_id','')
-      form.setValue('vendor_id','')
-      form.setValue('size','')
-      form.setValue('color_quantity','')
+      form.reset({
+        article_id:'',
+        vendor_id:'',
+        remarks:'',
+        workorder_id:'',
+        color:[],
+        color_quantity:[],
+        size:[],
+        ratio:''
+      })
+      
       setLoader(true)   
       SetNewArticle(true)     
       setLoader(false)
@@ -813,8 +839,8 @@ const Addpurchase = () => {
                               <PopoverContent className="w-52">
                                 <SelectGroup>
                                   <SelectLabel>Color</SelectLabel>
-                                  {color &&
-                                    color.map((value: any) => {
+                                  {colors &&
+                                    colors.map((value: any) => {
                                       const isChecked = selectedColors.includes(
                                         value.name.toString()
                                       );
@@ -973,55 +999,9 @@ const Addpurchase = () => {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="rate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Rate <span className="text-red-400">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field}></Input>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Weight <span className="text-red-400">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field}></Input>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </>
               )}
-              <FormField
-                control={form.control}
-                name="stock_ratio"
-                render={({ field }) => (
-                  <FormItem>
-                    
-                    <FormLabel>
-                      Stack Ratio <span className="text-red-400">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input {...field}></Input>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+             
             </div>
             {selectedColors.length > 0 && (
               <div className="flex flex-wrap p-5 gap-5">

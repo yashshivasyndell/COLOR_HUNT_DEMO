@@ -2483,6 +2483,7 @@ const addPurchaseOrder = async (req, res) => {
       workorder_id,
       workorder_date
     } = req.body;
+    console.log('body',req.body);
     // Handling empty strings or invalid values
     po_number = po_number === "" ? null : po_number;
     po_num_id = po_num_id === "" ? null : po_num_id;
