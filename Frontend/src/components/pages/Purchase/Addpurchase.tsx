@@ -133,7 +133,7 @@ const Addpurchase = () => {
     mode: "onChange",
   });
 
-  console.log("type of",typeof form.getValues('num_packs'));
+  console.log("type of", typeof form.getValues("num_packs"));
   const [articles, setArticles] = useState<any>([]);
   const [articlefield, setarticlefield] = useState(false);
   const [vendor, setVendor] = useState<any>([]);
@@ -978,120 +978,124 @@ const Addpurchase = () => {
                       </FormItem>
                     )}
                   />
+<FormField
+  control={form.control}
+  name="size"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>
+        Size <span className="text-red-400">*</span>
+      </FormLabel>
+      <FormControl>
+        <Select value={field.value || []}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <SelectTrigger className="w-52 flex flex-wrap min-h-[40px] gap-0.5 p-1">
+                {selectedOptions.length > 0 ? (
+                  <>
+                    {selectedOptions.slice(0, 3).map((option: any) => (
+                      <span
+                        key={option.id}
+                        className="bg-blue-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
+                      >
+                        <span>{option.name}</span>
+                        <button
+                          type="button"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updated = selectedOptions.filter(
+                              (o: any) => o.id !== option.id
+                            );
+                            setSelectedOptions(updated);
+                            field.onChange(updated);
 
-                  <FormField
-                    control={form.control}
-                    name="size"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Size <span className="text-red-400">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Select value={field.value || []}>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <SelectTrigger className="w-52 flex flex-wrap min-h-[40px] gap-0.5 p-1">
-                                  {selectedOptions.length > 0 ? (
-                                    <>
-                                      {selectedOptions
-                                        .slice(0, 3)
-                                        .map((option: any) => (
-                                          <span
-                                            key={option.id}
-                                            className="bg-blue-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
-                                          >
-                                            <span>{option.name}</span>
-                                            <button
-                                              type="button"
-                                              className="text-red-500 hover:text-red-700"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                const updated =
-                                                  selectedOptions.filter(
-                                                    (o: any) => o !== option
-                                                  );
-                                                setSelectedOptions(updated);
-                                                field.onChange(updated);
-                                              }}
-                                            >
-                                              ✕
-                                            </button>
-                                          </span>
-                                        ))}
-                                      {selectedOptions.length > 3 && (
-                                        <span className="text-gray-500 ">
-                                          + {selectedOptions.length - 3} more
-                                        </span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <SelectValue placeholder="Select Sizes" />
-                                  )}
-                                </SelectTrigger>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-52">
-                                <SelectGroup>
-                                  <SelectLabel>Sizes</SelectLabel>
-                                  {selectedSizes.map((value: any) => {
-                                    const isChecked = selectedOptions.some(
-                                      (o: any) => o.id === value.id
-                                    );
-                                    return (
-                                      <div
-                                        key={value.id}
-                                        className="flex items-center px-3 py-2 cursor-pointer"
-                                        onClick={() => {
-                                          const updated = isChecked
-                                            ? selectedOptions.filter(
-                                                (o: any) => o.id !== value.id
-                                              )
-                                            : [
-                                                ...selectedOptions,
-                                                {
-                                                  id: value.id,
-                                                  name: value.name,
-                                                },
-                                              ];
-                                          setSelectedOptions(updated);
-                                          field.onChange(updated);
-                                        }}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          readOnly
-                                          className="mr-2"
-                                        />
-                                        {value.name}
-                                      </div>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              </PopoverContent>
-                            </Popover>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                            // Remove the corresponding ratio value for the deselected option
+                            const updatedRatios = updated.map(() => "0"); // Adjust default ratio logic if necessary
+                            form.setValue("ratio", updatedRatios.join(","));
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                    {selectedOptions.length > 3 && (
+                      <span className="text-gray-500 ">
+                        + {selectedOptions.length - 3} more
+                      </span>
                     )}
-                  />
+                  </>
+                ) : (
+                  <SelectValue placeholder="Select Sizes" />
+                )}
+              </SelectTrigger>
+            </PopoverTrigger>
+            <PopoverContent className="w-52">
+              <SelectGroup>
+                <SelectLabel>Sizes</SelectLabel>
+                {selectedSizes.map((value: any) => {
+                  const isChecked = selectedOptions.some(
+                    (o: any) => o.id === value.id
+                  );
+                  return (
+                    <div
+                      key={value.id}
+                      className="flex items-center px-3 py-2 cursor-pointer"
+                      onClick={() => {
+                        const updated = isChecked
+                          ? selectedOptions.filter((o: any) => o.id !== value.id)
+                          : [
+                              ...selectedOptions,
+                              { id: value.id, name: value.name },
+                            ];
+                        setSelectedOptions(updated);
+                        field.onChange(updated);
 
-                  <FormField
-                    control={form.control}
-                    name="ratio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Ratio <span className="text-red-400">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value}></Input>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        // Dynamically update the ratio values when options are selected/deselected
+                        const updatedRatios = updated.map(() => "0"); // Adjust default ratio logic
+                        form.setValue("ratio", updatedRatios.join(","));
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        readOnly
+                        className="mr-2"
+                      />
+                      {value.name}
+                    </div>
+                  );
+                })}
+              </SelectGroup>
+            </PopoverContent>
+          </Popover>
+        </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+<FormField
+  control={form.control}
+  name="ratio"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>
+        Ratio <span className="text-red-400">*</span>
+      </FormLabel>
+      <FormControl>
+        <Input
+          {...field}
+          value={field.value} // Display the updated ratios here
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
                 </>
               )}
             </div>
