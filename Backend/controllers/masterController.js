@@ -1,5 +1,5 @@
 const { pool } = require("../db/dbConnect");
-const bcrypt = require('bcrypt')
+const bcrypt = require("bcrypt");
 const { asyncHandler, ApiResponse, ApiError } = require("../utils");
 const {
   addOrUpdateCategorySchema,
@@ -16,7 +16,7 @@ const { error } = require("winston");
 const { cli } = require("winston/lib/winston/config");
 const { Client } = require("pg");
 const { json } = require("express");
-const { date } = require("joi");
+const { date, number } = require("joi");
 
 // <!-- Category -->
 const getCategoryList = asyncHandler(async (req, res, next) => {
@@ -39,6 +39,7 @@ const getCategoryList = asyncHandler(async (req, res, next) => {
     await client.release();
   }
 });
+
 
 const getSingleCategoryDetails = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
@@ -83,7 +84,6 @@ const addCategory = asyncHandler(async (req, res, next) => {
       abortEarly: false,
     });
 
-    
     if (error) {
       const errors = error.details.map((err) => err.message);
       throw new ApiError(400, "Validation failed", errors);
@@ -291,7 +291,9 @@ const getSingleSubCategoryDetails = asyncHandler(async (req, res, next) => {
 
     return res
       .status(400)
-      .json(new ApiError(400, "No single subcategories found", { notFound: true }));
+      .json(
+        new ApiError(400, "No single subcategories found", { notFound: true })
+      );
   } catch (error) {
     return res
       .status(error.statusCode || 500)
@@ -350,7 +352,7 @@ const deleteSubCategory = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-      console.log('subcat id',id);
+    console.log("subcat id", id);
     if (!id) {
       return res
         .status(400)
@@ -1204,7 +1206,9 @@ const getSizeList = asyncHandler(async (req, res, next) => {
         .json(new ApiResponse(200, rows, "Successfully fetched sizes"));
     }
 
-    return res.status(400).json(new ApiError(400, "Failed to fetch sizes no Data"));
+    return res
+      .status(400)
+      .json(new ApiError(400, "Failed to fetch sizes no Data"));
   } catch (error) {
     return res
       .status(error.statusCode || 500)
@@ -1688,7 +1692,6 @@ const getSalesPersons = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 // <!-- User Management -->
 const getUserList = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
@@ -1799,8 +1802,6 @@ const addUser = asyncHandler(async (req, res, next) => {
     );
 
     if (rows.length) {
-      
-
       return res
         .status(200)
         .json(new ApiResponse(200, [], "Successfully added user"));
@@ -1876,7 +1877,6 @@ const updateUser = asyncHandler(async (req, res, next) => {
       const { rows } = await client.query(query);
 
       if (rows.length) {
-
         return res
           .status(200)
           .json(new ApiResponse(200, {}, "Successfully updated user"));
@@ -1908,7 +1908,6 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     );
 
     if (rows.length) {
-      
       return res
         .status(200)
         .json(new ApiResponse(200, {}, "Successfully deleted user"));
@@ -2010,8 +2009,6 @@ const addParty = asyncHandler(async (req, res, next) => {
       additional_rate,
     } = req.body;
 
-
-     
     let outletAssign;
 
     if (outlet_assign === true) {
@@ -2057,7 +2054,6 @@ const addParty = asyncHandler(async (req, res, next) => {
         sales_person,
       ]
     );
-  
 
     if (rows.length) {
       // activityLogger({
@@ -2088,7 +2084,7 @@ const deleteParty = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-     
+
     if (!id) {
       return res.status(400).json(new ApiError(400, "Party id is required"));
     }
@@ -2097,9 +2093,8 @@ const deleteParty = asyncHandler(async (req, res, next) => {
       "UPDATE party SET user_id = null WHERE user_id = $1 RETURNING *",
       [id]
     );
-     
-    if (rows.length) {
 
+    if (rows.length) {
       return res
         .status(200)
         .json(new ApiResponse(200, rows, "Successfully deleted party"));
@@ -2107,7 +2102,6 @@ const deleteParty = asyncHandler(async (req, res, next) => {
 
     return res.status(400).json(new ApiError(400, "Failed to delete party"));
   } catch (error) {
-    
     return res
       .status(error.statusCode || 500)
       .json(new ApiError(error.statusCode, error.message));
@@ -2155,8 +2149,6 @@ const updateParty = asyncHandler(async (req, res, next) => {
       additional_rate,
     } = req.body;
 
-  
-
     let outletAssign;
     if (outlet_assign === true) {
       outletAssign = 1;
@@ -2194,7 +2186,6 @@ const updateParty = asyncHandler(async (req, res, next) => {
     );
 
     if (rows.length) {
-
       return res
         .status(200)
         .json(new ApiResponse(200, rows, "Successfully updated party"));
@@ -2249,42 +2240,69 @@ const updateStatusOfParty = asyncHandler(async (req, res, next) => {
 const addArticle = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { category_id, subcategory_id, series_id, article_number, style_description, brand_id, fabric_name, fabric_composition } = req.body;
-    const { error } = addOrUpdateArticle.validate(req.body, { abortEarly: false });
+    const {
+      category_id,
+      subcategory_id,
+      series_id,
+      article_number,
+      style_description,
+      brand_id,
+      fabric_name,
+      fabric_composition,
+    } = req.body;
+    const { error } = addOrUpdateArticle.validate(req.body, {
+      abortEarly: false,
+    });
 
     if (error) {
-      
       const errors = error.details.map((err) => err.message);
       throw new ApiError(400, "Validation failed", errors);
     }
 
-   
     const articleExist = await client.query(
-      'SELECT * FROM ARTICLES WHERE article_number = $1',
+      "SELECT * FROM ARTICLES WHERE article_number = $1",
       [article_number]
     );
 
     if (articleExist.rows && articleExist.rows.length) {
-      throw new ApiError(400, "Article already exists", { alreadyExists: true });
+      throw new ApiError(400, "Article already exists", {
+        alreadyExists: true,
+      });
     }
 
     const { rows } = await client.query(
-      'INSERT INTO ARTICLES (ARTICLE_NUMBER, CATEGORY_ID, SUBCATEGORY_ID, SERIES_ID, STYLE_DESCRIPTION, BRAND_ID, FABRIC_NAME, FABRIC_COMPOSITION) ' +
-      'VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [article_number, category_id, subcategory_id, series_id, style_description, brand_id, fabric_name, fabric_composition]
+      "INSERT INTO ARTICLES (ARTICLE_NUMBER, CATEGORY_ID, SUBCATEGORY_ID, SERIES_ID, STYLE_DESCRIPTION, BRAND_ID, FABRIC_NAME, FABRIC_COMPOSITION) " +
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+      [
+        article_number,
+        category_id,
+        subcategory_id,
+        series_id,
+        style_description,
+        brand_id,
+        fabric_name,
+        fabric_composition,
+      ]
     );
 
     if (rows.length) {
-      return res.status(200).json(new ApiResponse(200, rows[0], "Successfully added article"));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, rows[0], "Successfully added article"));
     }
 
-    return res.status(400).json(new ApiResponse(400, 'Failed to add article'));
-
+    return res.status(400).json(new ApiResponse(400, "Failed to add article"));
   } catch (error) {
-    console.log("error catch ",error.message);
-    return res.status(500).json({message:'error in api catch',cause:error.message,stack:error.stack})
+    console.log("error catch ", error.message);
+    return res
+      .status(500)
+      .json({
+        message: "error in api catch",
+        cause: error.message,
+        stack: error.stack,
+      });
   } finally {
-    client.release();  
+    client.release();
   }
 };
 
@@ -2294,17 +2312,19 @@ const fetchArticles = async (req, res) => {
   const client = await pool.connect();
   try {
     const { rows } = await client.query(
-      'SELECT articles.id as articleId, articles.CATEGORY_ID, articles.ARTICLE_NUMBER, articles.STYLE_DESCRIPTION, articles.SUBCATEGORY_ID, articles.BRAND_ID, articles.SERIES_ID, ' +
-      'category.name AS category_name, subcategory.name AS subcategory_name, brand.name AS brand_name ' +
-      'FROM articles ' +
-      'INNER JOIN category ON articles.CATEGORY_ID = category.id ' +
-      'INNER JOIN brand ON articles.BRAND_ID = brand.id ' +
-      'INNER JOIN subcategory ON articles.SUBCATEGORY_ID = subcategory.id'
+      "SELECT articles.id as articleId, articles.CATEGORY_ID, articles.ARTICLE_NUMBER, articles.STYLE_DESCRIPTION, articles.SUBCATEGORY_ID, articles.BRAND_ID, articles.SERIES_ID, " +
+        "category.name AS category_name, subcategory.name AS subcategory_name, brand.name AS brand_name " +
+        "FROM articles " +
+        "INNER JOIN category ON articles.CATEGORY_ID = category.id " +
+        "INNER JOIN brand ON articles.BRAND_ID = brand.id " +
+        "INNER JOIN subcategory ON articles.SUBCATEGORY_ID = subcategory.id"
     );
     if (rows.length) {
-      return res.status(200).json(new ApiResponse(200, rows, "Articles fetched successfully"));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, rows, "Articles fetched successfully"));
     }
-    return res.status(200).json(new ApiResponse(200, [], 'No Articles found'));
+    return res.status(200).json(new ApiResponse(200, [], "No Articles found"));
   } catch (error) {
     return res.status(500).json(new ApiError(500, error.message));
   } finally {
@@ -2313,34 +2333,40 @@ const fetchArticles = async (req, res) => {
 };
 
 //Delete article
-const deleteArticle = async(req,res)=>{
-  const client =await pool.connect();
-  const {id} = req.params;
-  try{
-    if(!id){
-    return res.status(404).json(new ApiError(404,'User not found'))
-  }
-  const deletequery = 'DELETE FROM ARTICLES WHERE ID = $1'
+const deleteArticle = async (req, res) => {
+  const client = await pool.connect();
+  const { id } = req.params;
+  try {
+    if (!id) {
+      return res.status(404).json(new ApiError(404, "User not found"));
+    }
+    const deletequery = "DELETE FROM ARTICLES WHERE ID = $1";
 
-  const {rows} = await client.query(deletequery,[id])
-  if(rows){
-    return res.status(200).json(new ApiResponse(200,{},'Article deleted succesfully'))
+    const { rows } = await client.query(deletequery, [id]);
+    if (rows) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Article deleted succesfully"));
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiError(500, "Error in deleting api", error.message));
   }
-}catch(error){
-    return res.status(500).json(new ApiError(500,'Error in deleting api',error.message))
-}
-}
+};
 
 //Single article
-const getSingleArticle = async (req,res)=>{
-  const client = await pool.connect()
-  const {id} = req.params
-  try{
-    if(!id){
-    return res.status(404).json(new ApiError(404,'Article not found by this id'))
-  }
+const getSingleArticle = async (req, res) => {
+  const client = await pool.connect();
+  const { id } = req.params;
+  try {
+    if (!id) {
+      return res
+        .status(404)
+        .json(new ApiError(404, "Article not found by this id"));
+    }
 
-  const singleArticleQuery = `
+    const singleArticleQuery = `
       SELECT 
         articles.id AS articleId, 
         articles.CATEGORY_ID, 
@@ -2365,75 +2391,98 @@ const getSingleArticle = async (req,res)=>{
       WHERE 
         articles.ID = $1
     `;
-    
+
     const { rows } = await client.query(singleArticleQuery, [id]);
-  if(rows){
-    return res.status(200).json(new ApiResponse(200,{rows},'Single article feteched success'))
+    if (rows) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(200, { rows }, "Single article feteched success")
+        );
+    }
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "No single articles found in DB"));
+  } catch (error) {
+    return res.status(500).json(new ApiError(500, error.message));
   }
-  return res.status(200).json(new ApiResponse(200,'No single articles found in DB'))
-}catch(error){
-  return res.status(500).json(new ApiError(500,error.message))
-}
-}
+};
 
-const updatearticle = async (req,res)=>{
-  const client = await pool.connect()
-  const {id} = req.params;
-  const {category_id
-    ,article_number ,style_description,
-    subcategory_id,brand_id
-    ,series_id
-    ,fabric_name,fabric_composition} = req.body;
+const updatearticle = async (req, res) => {
+  const client = await pool.connect();
+  const { id } = req.params;
+  const {
+    category_id,
+    article_number,
+    style_description,
+    subcategory_id,
+    brand_id,
+    series_id,
+    fabric_name,
+    fabric_composition,
+  } = req.body;
 
-  if(!id){
-    return res.status(404).json(new ApiResponse(404,'Article not found by this id'))
+  if (!id) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, "Article not found by this id"));
   }
-  try{
-  const updatequery = 'UPDATE ARTICLES SET CATEGORY_ID = $1, ARTICLE_NUMBER = $2, STYLE_DESCRIPTION = $3, SUBCATEGORY_ID=$4,BRAND_ID=$5,SERIES_ID=$6 ,FABRIC_NAME=$7, FABRIC_COMPOSITION=$8 WHERE ID = $9 RETURNING *'
-  const values = [category_id, article_number, style_description, subcategory_id, brand_id, series_id,fabric_name,fabric_composition, id];
-  const {rows} =await client.query(updatequery,values)
-  if(rows){
-    return res.status(200).json(new ApiResponse(200,{rows}))
+  try {
+    const updatequery =
+      "UPDATE ARTICLES SET CATEGORY_ID = $1, ARTICLE_NUMBER = $2, STYLE_DESCRIPTION = $3, SUBCATEGORY_ID=$4,BRAND_ID=$5,SERIES_ID=$6 ,FABRIC_NAME=$7, FABRIC_COMPOSITION=$8 WHERE ID = $9 RETURNING *";
+    const values = [
+      category_id,
+      article_number,
+      style_description,
+      subcategory_id,
+      brand_id,
+      series_id,
+      fabric_name,
+      fabric_composition,
+      id,
+    ];
+    const { rows } = await client.query(updatequery, values);
+    if (rows) {
+      return res.status(200).json(new ApiResponse(200, { rows }));
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiError(500, "Error in api", error.message));
+  } finally {
+    client.release();
   }
-}catch(error){
-  return res.status(500).json(new ApiError(500,"Error in api",error.message))
-}finally{
-  client.release()
-}
-
-}
+};
 
 //Financial year
 const getfinancialYear = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { rows } = await client.query('SELECT * FROM FINANCIAL_YEAR');
+    const { rows } = await client.query("SELECT * FROM FINANCIAL_YEAR");
 
     if (rows.length > 0) {
-     
-      return res.status(200).json(new ApiResponse(200, 'Years fetched successfully', rows));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Years fetched successfully", rows));
     } else {
-      
-      return res.status(404).json(new ApiError(404, 'No financial year found'));
+      return res.status(404).json(new ApiError(404, "No financial year found"));
     }
   } catch (error) {
-    
-    return res.status(500).json({ message: 'Error in Financial year', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error in Financial year", error: error.message });
   } finally {
-   
     client.release();
   }
 };
 
-
-const getPurchaseOrderNumber = async () => {  
+const getPurchaseOrderNumber = async () => {
   const client = await pool.connect();
   try {
-    
     const { rows: LatestfyID } = await client.query(
       "SELECT id, CONCAT(start_year, '-', end_year) AS currentFinancialYear FROM financial_year ORDER BY id DESC LIMIT 1"
     );
-    console.log('latest ',LatestfyID);
+    console.log("latest ", LatestfyID);
     if (!LatestfyID.length) {
       throw new Error("No financial year found");
     }
@@ -2441,25 +2490,25 @@ const getPurchaseOrderNumber = async () => {
       "SELECT id, purchase_number, financial_year_id FROM purchase_number WHERE financial_year_id = $1 ORDER BY id DESC LIMIT 1",
       [LatestfyID[0].id]
     );
-       console.log('fy year',purchaseNumber);
+    console.log("fy year", purchaseNumber);
     if (purchaseNumber.length) {
       return {
         purchase_number_id: purchaseNumber[0].id,
-        purchaseNumber: parseInt(purchaseNumber[0].purchase_number, 10) + 1, 
+        purchaseNumber: parseInt(purchaseNumber[0].purchase_number, 10) + 1,
         financial_year_id: purchaseNumber[0].financial_year_id,
-        financial_year: LatestfyID[0].currentfinancialyear, 
+        financial_year: LatestfyID[0].currentfinancialyear,
       };
     } else {
       return {
         purchaseNumber: 1,
         financial_year_id: LatestfyID[0].id,
-        financial_year: LatestfyID[0].currentfinancialyear, 
+        financial_year: LatestfyID[0].currentfinancialyear,
       };
     }
   } catch (error) {
     console.log("Failed to create PO number", error);
   } finally {
-    client.release(); 
+    client.release();
   }
 };
 
@@ -2475,34 +2524,66 @@ const addPurchaseOrder = async (req, res) => {
       article_id,
       po_num_id,
       article_no_id,
+      color,
+      size,
       po_date,
       num_packs,
       size_ratio,
       remarks,
       vendor_id,
       workorder_id,
-      workorder_date
+      workorder_date,
     } = req.body;
-    console.log('body',req.body);
+
     // Handling empty strings or invalid values
     po_number = po_number === "" ? null : po_number;
     po_num_id = po_num_id === "" ? null : po_num_id;
     article_no_id = article_no_id === "" ? null : article_no_id;
     article_id = article_id === "" ? null : article_id;
     num_packs = num_packs === "" ? null : num_packs;
-    workorder_id = isNaN(workorder_id) ? null : workorder_id; 
+    workorder_id = isNaN(workorder_id) ? null : workorder_id;
     workorder_date = workorder_date === "" ? null : workorder_date;
 
-    if (po_number === 'ADD') {
+    if (po_number === "ADD") {
       const Generated_po_num = await getPurchaseOrderNumber();
-      console.log('fy ',Generated_po_num);
+
       if (Generated_po_num.error) {
-        return res.status(500).json({ message: "Error fetching PO number", cause: Generated_po_num.error });
+        return res
+          .status(500)
+          .json({
+            message: "Error fetching PO number",
+            cause: Generated_po_num.error,
+          });
       }
 
-      const poNumber = Generated_po_num.purchaseNumber + "/" + Generated_po_num.financial_year;
+      const poNumber =
+        Generated_po_num.purchaseNumber + "/" + Generated_po_num.financial_year;
       const rightPo = Generated_po_num.purchaseNumber;
 
+      //INSERT INTO COLOR AND SIZE TABLE
+      if (color && color.length) {
+        color.map(async (color) => {
+          await client.query(
+            "INSERT INTO article_color (article_id, color_id, color_name) VALUES ($1, $2, $3) RETURNING *",
+            [article_id, color.id, color.name]
+          );
+        });
+      }
+
+      const getRatio = size_ratio.split(",");
+      if (size && size.length) {
+        size.map(async (size, idx) => {
+          await client.query(
+            "INSERT INTO ARTICLE_SIZE (ARTICLE_ID,SIZE_ID,SIZE_NAME) VALUES ($1,$2,$3) RETURNING *",
+            [article_id, size.id, size.name]
+          );
+
+          await client.query(
+            "INSERT INTO ARTICLE_RATIO (ARTICLE_ID,ARTICLE_SIZE_ID,ARTICLE_RATIO) VALUES ($1,$2,$3) RETURNING *",
+            [article_id, size.id, getRatio[idx]]
+          );
+        });
+      }
       // Insert into purchase_number table
       const adQuery = `
         INSERT INTO purchase_number 
@@ -2510,11 +2591,20 @@ const addPurchaseOrder = async (req, res) => {
         VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *
       `;
-      const addParam = [rightPo, poNumber, Generated_po_num.financial_year_id, vendor_id, po_date, remarks];
+      const addParam = [
+        rightPo,
+        poNumber,
+        Generated_po_num.financial_year_id,
+        vendor_id,
+        po_date,
+        remarks,
+      ];
       const { rows } = await client.query(adQuery, addParam);
- 
+
       if (rows.length === 0) {
-        return res.status(400).json({ message: 'Error inserting data into PO_number table' });
+        return res
+          .status(400)
+          .json({ message: "Error inserting data into PO_number table" });
       }
 
       // Insert into purchase_order_details
@@ -2523,105 +2613,198 @@ const addPurchaseOrder = async (req, res) => {
         (po_number_id, article_id, num_packs, size_ratio, work_order_status_id, work_order_date) 
         VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *`,
-        [rows[0].id, article_id, num_packs, size_ratio, workorder_id, workorder_date]
+        [
+          rows[0].id,
+          article_id,
+          num_packs,
+          size_ratio,
+          workorder_id,
+          workorder_date,
+        ]
       );
 
       if (po_details.length === 0) {
-        return res.status(400).json({ message: 'Error inserting data into PO_detail table' });
+        return res
+          .status(400)
+          .json({ message: "Error inserting data into PO_detail table" });
       }
 
-      return res.status(200).json({ message: 'Successfully added data in pod', data: 200, rows });
-
+      return res
+        .status(200)
+        .json({ message: "Successfully added data in pod", data: 200, rows });
     } else {
-      
-      const { rows: currentPO } = await client.query('SELECT * FROM purchase_number ORDER BY id DESC LIMIT 1');
-      console.log('currpo', currentPO[0].id);
+      //Update colors acc to artiles
+      if (color && color.length) {
+        color.map(async (color) => {
+          await client.query(
+            "DELETE FROM ARTICLE_COLOR WHERE ARTICLE_ID = $1",
+            [article_id]
+          );
+          await client.query(
+            "INSERT INTO article_color (article_id, color_id, color_name) VALUES ($1, $2, $3) RETURNING *",
+            [article_id, color.id, color.name]
+          );
+        });
+      }
 
+      const getRatio = size_ratio.split(",");
+
+      if (size && size.length) {
+        size.map(async (size, idx) => {
+          await client.query("DELETE FROM ARTICLE_size WHERE ARTICLE_ID = $1", [
+            article_id,
+          ]);
+          await client.query(
+            "INSERT INTO ARTICLE_SIZE (ARTICLE_ID,SIZE_ID,SIZE_NAME) VALUES ($1,$2,$3) RETURNING *",
+            [article_id, size.id, size.name]
+          );
+        });
+      }
+      if (size_ratio && size_ratio.length) {
+        size.map(async (s_ratio, idx) => {
+          await client.query(
+            "DELETE FROM ARTICLE_ratio WHERE ARTICLE_ID = $1",
+            [article_id]
+          );
+          await client.query(
+            "INSERT INTO ARTICLE_RATIO (ARTICLE_ID,ARTICLE_SIZE_ID,ARTICLE_RATIO) VALUES ($1,$2,$3) RETURNING *",
+            [article_id, s_ratio.id, getRatio[idx]]
+          );
+        });
+      }
+      const { rows: currentPO } = await client.query(
+        "SELECT * FROM purchase_number ORDER BY id DESC LIMIT 1"
+      );
       if (Id) {
-         const {rows:byPODid} = await client.query('SELECT id,po_number_id,article_id FROM PURCHASE_ORDER_DETAILS WHERE ID = $1 AND ARTICLE_ID = $2',[Id,article_id])
-         if(byPODid.length > 0){
-            
-              const {rows:directUpdate} = await client.query('UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2 WHERE id = $3 RETURNING *',[num_packs,size_ratio,Id])
-              if(directUpdate.length>0){
-                return res.status(200).json(new ApiResponse(200,'Successfully updated entry in POD table',{data:directUpdate}))
-              }
-         }
-        else{
-          const {rows:existingArticle} = await client.query('SELECT ID , ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1 AND ARTICLE_ID = $2',[Id,article_id])
-          console.log('article assoicated with sent po id',existingArticle);
-          if(existingArticle.length > 0){
-            const {rows:PODid} = await client.query('SELECT ID FROM purchase_order_details WHERE PO_NUMBER_ID = $1 AND ARTICLE_ID = $2',[Id,article_id])
-            console.log('pod ID',PODid);
-            const id = PODid[0].id
-    
+        const { rows: byPODid } = await client.query(
+          "SELECT id,po_number_id,article_id FROM PURCHASE_ORDER_DETAILS WHERE ID = $1 AND ARTICLE_ID = $2",
+          [Id, article_id]
+        );
+        if (byPODid.length > 0) {
+          const { rows: directUpdate } = await client.query(
+            "UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2 WHERE id = $3 RETURNING po_number_id as id",
+            [num_packs, size_ratio, Id]
+          );
+          if (directUpdate.length > 0) {
+            return res
+              .status(200)
+              .json({ message: "Successfully added data in pod", data: 200, rows:directUpdate });
+          }
+        } else {
+          const { rows: existingArticle } = await client.query(
+            "SELECT ID , ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1 AND ARTICLE_ID = $2",
+            [Id, article_id]
+          );
+
+          if (existingArticle.length > 0) {
+            const { rows: PODid } = await client.query(
+              "SELECT ID FROM purchase_order_details WHERE PO_NUMBER_ID = $1 AND ARTICLE_ID = $2",
+              [Id, article_id]
+            );
+
+            const id = PODid[0].id;
+
             const { rows: updatePO } = await client.query(
-              'UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2 WHERE id = $3 RETURNING *',
+              "UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2 WHERE id = $3 RETURNING *",
               [num_packs, size_ratio, id]
             );
-    
+
             if (updatePO.length > 0) {
-              return res.status(200).json(new ApiResponse(200,updatePO,'Data Updated success'));
+              return res
+                .status(200)
+                .json(new ApiResponse(200, updatePO, "Data Updated success"));
             }
           }
-          
         }
-
       }
       const { rows } = await client.query(
-        `INSERT INTO purchase_order_details
-          (po_number_id, article_id, num_packs, work_order_status_id, work_order_date, size_ratio)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          ON CONFLICT (po_number_id, article_id)
-          DO UPDATE SET
-            num_packs = EXCLUDED.num_packs,
-            size_ratio = EXCLUDED.size_ratio
-          RETURNING po_number_id as id`,
-        [currentPO[0].id, article_id, num_packs, workorder_id, workorder_date, size_ratio]
+        `WITH inserted AS (
+  INSERT INTO purchase_order_details
+    (po_number_id, article_id, num_packs, work_order_status_id, work_order_date, size_ratio)
+  VALUES ($1, $2, $3, $4, $5, $6)
+  ON CONFLICT (po_number_id, article_id)
+  DO UPDATE SET
+    num_packs = EXCLUDED.num_packs,
+    size_ratio = EXCLUDED.size_ratio
+  RETURNING po_number_id AS id
+)
+SELECT 
+  i.id, 
+  pn.po_fy
+FROM inserted i
+JOIN purchase_number pn ON pn.id = i.id`,
+        [
+          currentPO[0].id,
+          article_id,
+          num_packs,
+          workorder_id,
+          workorder_date,
+          size_ratio,
+        ]
       );
 
       if (rows.length === 0) {
-        return res.status(400).json({ message: 'Error inserting data into PO_detail table' });
+        return res
+          .status(400)
+          .json({ message: "Error inserting data into PO_detail table" });
       }
 
-      return res.status(200).json({ message: 'Successfully added data', data: 200, rows });
+      return res
+        .status(200)
+        .json({ message: "Successfully added data ", data: 200, rows });
     }
   } catch (error) {
     console.error("This is error", error);
-    return res.status(500).json({ message: 'Error in API', cause: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error in API", cause: error.message });
   } finally {
     client.release();
   }
 };
 
-const editPODtable = async (req,res)=>{
-  const client = await pool.connect()
-  const {id} = req.params
-  try{
-     if(id){
-      const {rows:editPODelem} = await client.query('SELECT ID,PO_NUMBER_ID,ARTICLE_ID ,NUM_PACKS,SIZE_RATIO FROM PURCHASE_ORDER_DETAILS WHERE ID = $1 RETURNING *',[id])
-      console.log('from pod table ',editPODelem);
-      if(editPODelem.length > 0){
-        const {rows:edited} = await client.query('UPDATE PURCHASE_ORDER_DETAILS SET NUM_PACKS = $1, SIZE_RATIO = $2 WHERE ID = $3',[num_packs,size_ratio,id])
-        if(edited.length > 0){
-          return res.statusCode(200).ApiResponse(200,'Successfully updated From pod table',{data:rows})
+const editPODtable = async (req, res) => {
+  const client = await pool.connect();
+  const { id } = req.params;
+  try {
+    if (id) {
+      const { rows: editPODelem } = await client.query(
+        "SELECT ID,PO_NUMBER_ID,ARTICLE_ID ,NUM_PACKS,SIZE_RATIO FROM PURCHASE_ORDER_DETAILS WHERE ID = $1 RETURNING *",
+        [id]
+      );
+      console.log("from pod table ", editPODelem);
+      if (editPODelem.length > 0) {
+        const { rows: edited } = await client.query(
+          "UPDATE PURCHASE_ORDER_DETAILS SET NUM_PACKS = $1, SIZE_RATIO = $2 WHERE ID = $3",
+          [num_packs, size_ratio, id]
+        );
+        if (edited.length > 0) {
+          return res
+            .statusCode(200)
+            .ApiResponse(200, "Successfully updated From pod table", {
+              data: rows,
+            });
         }
-           return res.statusCode(400).ApiError(400,'Element for this id not found')
+        return res
+          .statusCode(400)
+          .ApiError(400, "Element for this id not found");
       }
-      return res.statusCode(404).ApiError(404,'Not found by this id')
-     }else{
-       return res.statusCode(404).ApiError(404,'Id not found')
-     }
-  }catch(error){
-      return res.statusCode(500).ApiError(500,'Error in catch blk',{cause:error.message})
-  }finally{
-    client.release()
+      return res.statusCode(404).ApiError(404, "Not found by this id");
+    } else {
+      return res.statusCode(404).ApiError(404, "Id not found");
+    }
+  } catch (error) {
+    return res
+      .statusCode(500)
+      .ApiError(500, "Error in catch blk", { cause: error.message });
+  } finally {
+    client.release();
   }
-}
-
+};
 
 const getPurchaseOrderList = async (req, res) => {
   const client = await pool.connect();
-  const {id} = req.params
+  const { id } = req.params;
   try {
     const { rows } = await client.query(`
       SELECT 
@@ -2642,21 +2825,36 @@ const getPurchaseOrderList = async (req, res) => {
     `);
 
     if (rows.length > 0) {
-      return res.status(200).json(new ApiResponse(200, 'Purchase number table fetched successfully', rows));
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "Purchase number table fetched successfully",
+            rows
+          )
+        );
     } else {
-      return res.status(404).json(new ApiResponse(404, 'No data found in purchase number table'));
+      return res
+        .status(404)
+        .json(new ApiResponse(404, "No data found in purchase number table"));
     }
   } catch (error) {
-    console.error('Error in getPurchaseOrderList:', error); 
-    return res.status(500).json({ message: 'Error fetching purchase order list', error: error.message });
+    console.error("Error in getPurchaseOrderList:", error);
+    return res
+      .status(500)
+      .json({
+        message: "Error fetching purchase order list",
+        error: error.message,
+      });
   } finally {
-    client.release(); 
+    client.release();
   }
 };
 
-const getPurchaseNumberTable = async(req,res)=>{
-  const client = await pool.connect()
-  try{
+const getPurchaseNumberTable = async (req, res) => {
+  const client = await pool.connect();
+  try {
     const query = `
     WITH split_values AS (
       SELECT 
@@ -2685,28 +2883,57 @@ const getPurchaseNumberTable = async(req,res)=>{
       pn.id;
     `;
 
-    
-    const { rows:Table } = await client.query(query);
-    if(Table.length > 0){
-      return res.status(200).json({message:'P_number Table fetched',Data:Table})
+    const { rows: Table } = await client.query(query);
+    if (Table.length > 0) {
+      return res
+        .status(200)
+        .json({ message: "P_number Table fetched", Data: Table });
     }
-    return res.status(500).json({message:'Error in fetching table '})
-}catch(error){
-  return res.status(500).json({message:'Error in api gone in catch'})
-}
-}
+    return res.status(500).json({ message: "Error in fetching table " });
+  } catch (error) {
+    return res.status(500).json({ message: "Error in api gone in catch" });
+  }
+};
 //Delete frm POD table
-const deletePurchaseOrder = async (req,res)=> {
-    const client = await pool.connect()
-    const {id} = req.params
-   
-    try{
-      const {rows} = await client.query('DELETE FROM PURCHASE_ORDER_DETAILS WHERE id = $1 RETURNING *',[id])
-      if(rows.length > 0){
-        return res.status(200).json(new ApiResponse(200,'Deleted successfully',rows))
-      }else{
-        return res.status(400).json(new ApiResponse(400,'Error in deleting api'))
-      }
+const deletePurchaseOrder = async (req, res) => {
+  const client = await pool.connect();
+  const { id } = req.params;
+  console.log("del id", id);
+  try {
+    const { rows: getId } = await client.query(
+      "SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE ID = $1",
+      [id]
+    );
+    const articleId = getId[0].article_id;
+    console.log(getId);
+    const { rows: delCol } = await client.query(
+      "DELETE FROM ARTICLE_COLOR WHERE ARTICLE_ID = $1",
+      [articleId]
+    );
+
+    const { rows: delSize } = await client.query(
+      "DELETE FROM ARTICLE_SIZE WHERE ARTICLE_ID = $1",
+      [articleId]
+    );
+
+    const { rows: delRatio } = await client.query(
+      "DELETE FROM ARTICLE_RATIO WHERE ARTICLE_ID = $1",
+      [articleId]
+    );
+
+    const { rows } = await client.query(
+      "DELETE FROM PURCHASE_ORDER_DETAILS WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (rows.length > 0) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Deleted successfully", rows));
+    } else {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "Error in deleting api"));
+    }
     // if(rows.length > 0){
     //   const deletequery = 'DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *'
     //   const deleteParams = [id]
@@ -2723,112 +2950,243 @@ const deletePurchaseOrder = async (req,res)=> {
     // }else{
     //   return res.status(400).json(new ApiError(400,'PO number not found by this ID'))
     // }
-  }catch(error){
-      console.log("Error");
-      return res.status(500),json(new ApiError(500,'Error in delete api',error.message))
-    }
-}
+  } catch (error) {
+    console.log("Error");
+    return (
+      res.status(500),
+      json(new ApiError(500, "Error in delete api", error.message))
+    );
+  }
+};
 
 //DELETE WHOLE PURCHASE NUMBER
 
 const deletePoNumber = async (req, res) => {
   const client = await pool.connect();
   const { id } = req.params;
-  console.log('PO Number ID:', id);
+  console.log("PO Number ID:", id);
 
   try {
-    // Delete from PURCHASE_ORDER_DETAILS first
-    const deletePOD = await client.query('DELETE FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1', [id]);
 
+    const { rows: deleteColor } = await client.query(
+      "DELETE FROM ARTICLE_COLOR WHERE ARTICLE_ID IN (SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1)",
+      [id]
+    );
+    
+    const { rows: deleteSize } = await client.query(
+      "DELETE FROM ARTICLE_SIZE WHERE ARTICLE_ID IN (SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1)",
+      [id]
+    );
+    const { rows: deleteRatio } = await client.query(
+      "DELETE FROM ARTICLE_RATIO WHERE ARTICLE_ID IN (SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1)",
+      [id]
+    );
+    // Delete from PURCHASE_ORDER_DETAILS first
+    const {rows:deletePOD} = await client.query(
+      "DELETE FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1",
+      [id]
+    );
+
+    if(deletePOD)
     if (deletePOD.rowCount > 0) {
       // Now delete from PURCHASE_NUMBER
-      const deleteQ = await client.query('DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *', [id]);
+      const deleteQ = await client.query(
+        "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
+        [id]
+      );
 
       if (deleteQ.rowCount > 0) {
-        return res.status(200).json(new ApiResponse(200,{ message: 'Deleted successfully', data: deleteQ.rows }));
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(200, {
+              message: "Deleted successfully",
+              data: deleteQ.rows,
+            })
+          );
       }
-    }else{
-      const deleteQ = await client.query('DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *', [id]);
+    } else {
+      const deleteQ = await client.query(
+        "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
+        [id]
+      );
 
       if (deleteQ.rowCount > 0) {
-        return res.status(200).json(new ApiResponse(200,{ message: 'Deleted successfully', data: deleteQ.rows }));
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(200, {
+              message: "Deleted successfully",
+              data: deleteQ.rows,
+            })
+          );
       }
     }
 
-    return res.status(400).json(new ApiResponse(400, { message: 'PO not found by this ID' }));
+    return res
+      .status(400)
+      .json(new ApiResponse(400, { message: "PO not found by this ID" }));
   } catch (error) {
-    console.error('Error in deletePoNumber:', error.message);
-    return res.status(500).json(new ApiError(500, 'Error in deleting PO Number', error.message));
+    console.error("Error in deletePoNumber:", error.message);
+    return res
+      .status(500)
+      .json(new ApiError(500, "Error in deleting PO Number", error.message));
   } finally {
     client.release();
   }
 };
 
 //VENDORS FETCH
-const fetchvendors = async(req,res)=>{
-  const client =await pool.connect()
-  const fetchQuery = 'SELECT * FROM VENDOR'
-  try{const {rows} = await client.query(fetchQuery)
-  if(rows.length > 0){
-    return res.status(200).json(new ApiResponse(200,"Vendors fetched success",rows))
-  }
-  return res.status(400).json(new ApiError(400,'No vendors found'))
-  }catch(error){
-    return res.status(500).json({message:'Error in vendor api',cause:error.message})
-  }finally{
-    await client.release()
-  }
-}
-
-const fetchSinglePo = async (req, res) => {
-  const { id } = req.params;
-  console.log('id:', id);
-
+const fetchvendors = async (req, res) => {
   const client = await pool.connect();
-
-  const {rows:fetchFromPOD} = await client.query('SELECT * FROM purchase_order_details where id = $1',[id])
-  console.log('pod',fetchFromPOD);
-  if(fetchFromPOD.length > 0){
-    const {rows:podData} = await client.query(`
-     SELECT 
-     PURCHASE_NUMBER.PURCHASE_NUMBER,
-     PURCHASE_NUMBER.PO_FY,
-     PURCHASE_NUMBER.VENDOR_ID,
-     PURCHASE_NUMBER.PO_DATE,
-    PURCHASE_NUMBER.REMARKS,
-    ARTICLES.id as articleID,
-    ARTICLES.ARTICLE_NUMBER AS ARTICLE_NUM
-    FROM PURCHASE_ORDER_DETAILS
-    INNER JOIN PURCHASE_NUMBER 
-    ON PURCHASE_ORDER_DETAILS.PO_NUMBER_ID = PURCHASE_NUMBER.ID
-    INNER JOIN ARTICLES 
-    ON PURCHASE_ORDER_DETAILS.ARTICLE_ID = ARTICLES.ID
-    WHERE PURCHASE_ORDER_DETAILS.ID = ${id}`)
-    if(podData.length > 0){
-      return res.status(200).json(new ApiResponse(200,'Succefully fetched single POD table item',podData[0]))
-    }
-  }
-  const fetchQuery = 'SELECT PURCHASE_NUMBER, PO_FY, PO_DATE, REMARKS, VENDOR_ID FROM PURCHASE_NUMBER WHERE id = $1';
-
+  const fetchQuery = "SELECT * FROM VENDOR";
   try {
-    const { rows } = await client.query(fetchQuery, [id]);
-    
+    const { rows } = await client.query(fetchQuery);
     if (rows.length > 0) {
-      return res.status(200).json(new ApiResponse(200, 'Single PO fetched successfully', rows[0])); 
-    } else {
-      return res.status(400).json(new ApiError(400, 'No PO found with this ID'));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Vendors fetched success", rows));
     }
+    return res.status(400).json(new ApiError(400, "No vendors found"));
   } catch (error) {
-    console.error('Error:YY', error);
-    return res.status(500).json(new ApiError(500, 'Error in fetchSinglePO API', error.message));
+    return res
+      .status(500)
+      .json({ message: "Error in vendor api", cause: error.message });
   } finally {
-    client.release(); 
+    await client.release();
   }
 };
 
-const fetchPO_details = async(req,res)=>{
-  const {id} = req.params
-  const client = await pool.connect()
+const fetchSinglePo = async (req, res) => {
+  const { id } = req.params;
+  console.log("Fetching PO with ID:", id);
+
+  const client = await pool.connect();
+
+  try {
+    // Fetch from purchase_order_details to check if ID exists
+    const { rows: fetchFromPOD } = await client.query(
+      "SELECT * FROM purchase_order_details WHERE id = $1",
+      [id]
+    );
+
+    console.log("POD Data:", fetchFromPOD);
+
+    if (fetchFromPOD.length > 0) {
+      // Fetch detailed PO data with joined tables
+      const { rows: podData } = await client.query(
+        `
+        SELECT 
+          PURCHASE_NUMBER.PURCHASE_NUMBER,
+          PURCHASE_NUMBER.PO_FY,
+          PURCHASE_NUMBER.VENDOR_ID,
+          PURCHASE_NUMBER.PO_DATE,
+          PURCHASE_NUMBER.REMARKS,
+          PURCHASE_ORDER_DETAILS.WORK_ORDER_STATUS_ID,
+          PURCHASE_ORDER_DETAILS.WORK_ORDER_DATE,
+          ARTICLES.ID AS articleID,
+          ARTICLES.ARTICLE_NUMBER AS ARTICLE_NUM,
+          STRING_AGG(DISTINCT ARTICLE_COLOR.COLOR_ID::TEXT, ',') AS COLOR_IDS,
+          STRING_AGG(DISTINCT ARTICLE_COLOR.COLOR_NAME, ',') AS COLOR_NAMES,
+          STRING_AGG(DISTINCT ARTICLE_SIZE.SIZE_ID::TEXT, ',') AS SIZE_IDS,
+          STRING_AGG(DISTINCT ARTICLE_SIZE.SIZE_NAME, ',') AS SIZE_NAMES,
+          STRING_AGG(DISTINCT PURCHASE_ORDER_DETAILS.NUM_PACKS, ',') AS NUM_PACKS,
+          STRING_AGG(DISTINCT ARTICLE_RATIO.ARTICLE_RATIO::TEXT, ',') AS ARTICLE_RATIOS
+        FROM PURCHASE_ORDER_DETAILS
+        JOIN PURCHASE_NUMBER 
+          ON PURCHASE_ORDER_DETAILS.PO_NUMBER_ID = PURCHASE_NUMBER.ID
+        JOIN ARTICLES 
+          ON PURCHASE_ORDER_DETAILS.ARTICLE_ID = ARTICLES.ID
+        JOIN ARTICLE_COLOR 
+          ON ARTICLES.ID = ARTICLE_COLOR.ARTICLE_ID
+        JOIN ARTICLE_SIZE 
+          ON ARTICLES.ID = ARTICLE_SIZE.ARTICLE_ID
+        JOIN ARTICLE_RATIO 
+          ON ARTICLES.ID = ARTICLE_RATIO.ARTICLE_ID
+        WHERE PURCHASE_ORDER_DETAILS.ID = $1
+        GROUP BY 
+          PURCHASE_NUMBER.PURCHASE_NUMBER,
+          PURCHASE_NUMBER.PO_FY,
+          PURCHASE_NUMBER.VENDOR_ID,
+          PURCHASE_NUMBER.PO_DATE,
+          PURCHASE_NUMBER.REMARKS,
+          ARTICLES.ID,
+          PURCHASE_ORDER_DETAILS.WORK_ORDER_STATUS_ID,
+          PURCHASE_ORDER_DETAILS.WORK_ORDER_DATE,
+          ARTICLES.ARTICLE_NUMBER;
+        `,
+        [id]
+      );
+      console.log('details',podData);
+      if (podData.length > 0) {
+        // Format response for frontend
+        const formattedData = podData.map((row) => ({
+          purchase_number: row.purchase_number,
+          po_fy: row.po_fy,
+          vendor_id: row.vendor_id,
+          po_date: row.po_date,
+          remarks: row.remarks,
+          article_id: row.articleid,
+          article_number: row.article_num,
+          workorder_id:row.work_order_status_id,
+         workorder_date:row.work_order_date,
+          color: row.color_ids
+            ? row.color_ids.split(",").map((id, index) => ({
+                id: parseInt(id, 10),
+                name: row.color_names.split(",")[index] || "",
+              }))
+            : [],
+          size: row.size_ids
+            ? row.size_ids.split(",").map((id, index) => ({
+                id: parseInt(id, 10),
+                name: row.size_names.split(",")[index] || "",
+              }))
+            : [],
+          num_packs: row.num_packs ? row.num_packs.split(",").map(Number) : [],
+          article_ratios: row.article_ratios
+            ? row.article_ratios.split(",").join(",")
+            : "",
+        }));
+
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(
+              200,
+              "Successfully fetched single POD item",
+              formattedData[0]
+            )
+          );
+      }
+    }
+
+    // If no matching POD found, fetch basic PO details
+    const fetchQuery =
+      "SELECT PURCHASE_NUMBER, PO_FY, PO_DATE, REMARKS, VENDOR_ID FROM PURCHASE_NUMBER WHERE id = $1";
+    const { rows } = await client.query(fetchQuery, [id]);
+
+    if (rows.length > 0) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Single PO fetched successfully", rows[0]));
+    } else {
+      return res
+        .status(400)
+        .json(new ApiError(400, "No PO found with this ID"));
+    }
+  } catch (error) {
+    console.error("Error in fetchSinglePo:", error);
+    return res
+      .status(500)
+      .json(new ApiError(500, "Error fetching single PO", error.message));
+  } finally {
+    client.release();
+  }
+};
+
+const fetchPO_details = async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
   const query = `
       SELECT 
         PURCHASE_ORDER_DETAILS.id as id,
@@ -2838,7 +3196,7 @@ const fetchPO_details = async(req,res)=>{
         ARTICLES.ARTICLE_NUMBER,
         ARTICLES.SERIES_ID AS SERIAL,
         NUM_PACKS AS PIECES,
-        BRAND.NAME AS BRAND_NAME
+      BRAND.NAME AS BRAND_NAME
       FROM PURCHASE_ORDER_DETAILS
       JOIN ARTICLES ON PURCHASE_ORDER_DETAILS.ARTICLE_ID = ARTICLES.ID
       JOIN CATEGORY ON ARTICLES.CATEGORY_ID = CATEGORY.ID
@@ -2849,20 +3207,25 @@ const fetchPO_details = async(req,res)=>{
       WHERE PURCHASE_NUMBER.ID = $1;
     `;
 
-    try{
-      const {rows} =await client.query(query,[id])
-    if(rows.length > 0){
-      return res.status(200).json(new ApiResponse(200,'POD table fetched successfully',rows))
-    }else{
-      return res.status(400).json(new ApiError(400,'Error in fetch POD table api'))
-    }}catch(error){
-      console.log('err',error);
-      return res.status(500).json(new ApiError(500,'Error in api catch block'))
-    }finally{
-      client.release()
+  try {
+    const { rows } = await client.query(query, [id]);
+    console.log("id", id);
+    if (rows.length > 0) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "POD table fetched successfully", rows));
+    } else {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "Exception case"));
     }
-}
- 
+  } catch (error) {
+    console.log("err", error);
+    return res.status(500).json(new ApiError(500, "Error in api catch block"));
+  } finally {
+    client.release();
+  }
+};
 
 module.exports = {
   getSalesPersons,
@@ -2930,7 +3293,6 @@ module.exports = {
   deleteArticle,
   getSingleArticle,
   updatearticle,
-
   addPurchaseOrder,
   getfinancialYear,
   fetchvendors,
@@ -2940,5 +3302,5 @@ module.exports = {
   fetchPO_details,
   getPurchaseNumberTable,
   deletePoNumber,
-  editPODtable
+  editPODtable,
 };

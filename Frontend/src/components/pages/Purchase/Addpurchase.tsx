@@ -63,10 +63,7 @@ const Addpurchase = () => {
     ]),
     article_id: z.union([z.number(), z.string()]),
     po_date: z.date({ message: "Po date is must" }),
-    num_packs: z.union([
-      z.number({ message: "No of peices is must" }),
-      z.string(),
-    ]).optional(),
+    num_packs: z.union([z.number(), z.string()]).optional(),
     remarks: z.string({ message: "Remarks are must" }),
     workorder_id: z.union([z.number(), z.string()]).optional(),
     workorder_date: z.date().optional(),
@@ -75,8 +72,18 @@ const Addpurchase = () => {
     brand: z.string().or(z.number()).or(z.null()).optional(),
     serial: z.string().or(z.number()).or(z.null()).optional(),
     style_description: z.string().or(z.number()).or(z.null()).optional(),
-    color: z.array(z.string()),
-    size: z.array(z.string()),
+    color: z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+      })
+    ),
+    size: z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+      })
+    ),
     ratio: z.string({ message: "Please enter valid ratio for size" }).refine(
       (val) => {
         const selectedOptionsLength = selectedOptions.length;
@@ -86,19 +93,23 @@ const Addpurchase = () => {
       },
       { message: "Enter valid ratio for size" }
     ),
-    stock_ratio: z.union([
-      z.number({ message: "Stock ratio is must" }),
-      z.string(),
-    ]).optional(),
-    rate: z.union([z.number({ message: "Rate is must" }), z.string()]).optional(),
-    weight: z.union([z.number({ message: "Weight is a must" }), z.string()]).optional(),
+    stock_ratio: z
+      .union([z.number({ message: "Stock ratio is must" }), z.string()])
+      .optional(),
+    rate: z
+      .union([z.number({ message: "Rate is must" }), z.string()])
+      .optional(),
+    weight: z
+      .union([z.number({ message: "Weight is a must" }), z.string()])
+      .optional(),
     color_quantity: z.array(
       z.object({
         color_id: z
           .union([
             z.string({ message: "color id is req" }),
             z.number({ message: "color id is req" }),
-          ]) .optional(),
+          ])
+          .optional(),
         quantity: z.union([z.number(), z.string()]),
       })
     ),
@@ -110,26 +121,31 @@ const Addpurchase = () => {
     defaultValues: {
       workorder_date: new Date(),
       po_date: new Date(),
-      color: [], // Default as empty array
-      color_quantity: [], // Default as empty array
-      size: [], // Default as empty array
-      ratio: "", // Default as empty string or appropriate default
-      article_id: "", 
+      color: [],
+      color_quantity: [],
+      size: [],
+      ratio: "",
+      article_id: "",
       vendor_id: "",
       remarks: "",
       workorder_id: "",
     },
     mode: "onChange",
   });
-  
 
+  console.log("type of",typeof form.getValues('num_packs'));
   const [articles, setArticles] = useState<any>([]);
   const [articlefield, setarticlefield] = useState(false);
   const [vendor, setVendor] = useState<any>([]);
   const [colorQuant, setColorQuant] = useState(false);
   const [colors, setColor] = useState<any>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedSizes, setSelectedSizes] = useState<any>([]);
+  const [selectedColors, setSelectedColors] = useState<
+    { id: number; name: string }[]
+  >([]);
+
+  const [selectedSizes, setSelectedSizes] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [workorder, setWorkorder] = useState([]);
 
   const getYear = async () => {
@@ -138,10 +154,10 @@ const Addpurchase = () => {
     const vendor = await fetchvendors();
     setVendor(vendor.message);
     const colors = await fetchColor();
-    console.log('col',colors);
     setColor(colors.data);
-    
+
     const sizes = await fetchSize();
+
     setSelectedSizes(sizes.data);
     const workorder = await fetchworkorder();
     setWorkorder(workorder.data);
@@ -149,7 +165,7 @@ const Addpurchase = () => {
 
   const getSingleArticle = async (id: number) => {
     const article = await fetchSinglearticle(id);
-   
+
     const array = article.data.rows;
     array.map((val: any) =>
       form.reset({
@@ -163,115 +179,136 @@ const Addpurchase = () => {
     );
   };
 
-
-  const [NewArticle,SetNewArticle] = useState(false)
+  const [NewArticle, SetNewArticle] = useState(false);
   let poNumber = location.pathname === "/add" ? "ADD" : "EDIT";
 
-  if(NewArticle){
-    poNumber = ''
+  if (NewArticle) {
+    poNumber = "";
   }
 
   const [poNumId, setPoNumId] = useState<number | null>(null);
   const [articleNoId, setArticleNoId] = useState<number | null>(null);
-  const [Id,setId] = useState('')
-  const [po_fy,setPo_fy] = useState('')
-  const [callTable,setcallTable] = useState(false)
- 
-  // const artie = form.watch('article_id')
-  // const vend = form.watch('article_id')
-  // const col = form.watch('color')
-  // console.log('Article',artie);
-  // console.log('Vendor',artie);
-  // console.log('Colors',artie);
+  const [Id, setId] = useState("");
+  const [po_fy, setPo_fy] = useState("");
+  const [callTable, setcallTable] = useState(false);
 
   const submit = async (data: any) => {
-    const payload = {   
-      Id:editId,
+    const payload = {
+      Id: editId,
       po_number: poNumber,
       po_num_id: poNumId,
-      size_ratio:data.ratio,
+      size_ratio: data.ratio,
       article_no_id: articleNoId,
-      color:data.color,
-      size:data.size,
+      color: data.color,
+      size: data.size,
       article_id: parseInt(data.article_id),
       po_date: moment(data.po_date).format("YYYY-MM-DD"),
-      num_packs: (data.num_packs),
+      num_packs: data.num_packs,
       remarks: data.remarks,
       vendor_id: parseInt(data.vendor_id),
       workorder_id: parseInt(data.workorder_id),
       workorder_date: moment(data.workorder_date).format("YYYY-MM-DD"),
     };
     console.log("payload", payload);
-    setcallTable(true) //Helper state for table
-    try{    
+    try {
       const addPurchaseorder = await addpurchaseorder(payload);
-       const redirectId = addPurchaseorder.rows[0].id
-      
-        console.log('res add',addPurchaseorder); 
-    if (addPurchaseorder?.rows?.length > 0) {
-      setLoader(true)
-      setPo_fy("PO number "+addPurchaseorder.rows[0].po_fy)
-      setId(addPurchaseorder.rows[0].id)
-      setPoNumId(addPurchaseorder.rows[0].po_number_id); 
-      setArticleNoId(addPurchaseorder.rows[0].article_id);
-      setLoader(false)
-    }
-
-    if (addPurchaseorder.data === 200) {
-      form.reset({
-        article_id:'',
-        vendor_id:'',
-        remarks:'',
-        workorder_id:'',
-        color:[],
-        color_quantity:[],
-        size:[],
-        ratio:''
-      })
-      
-      setLoader(true)   
-      SetNewArticle(true)     
-      setLoader(false)
-      try {
-        CustomToast(200, "Data successfuly added");
-        navigate(`/editPO/${redirectId}`)
-        fetchPOD()
-        
-      } catch (error) {
-        CustomToast(500, "Error in saving data");
+      console.log("res add", addPurchaseorder);
+      setcallTable(true);
+      const redirectId = addPurchaseorder.rows[0].id;
+      if (addPurchaseorder?.rows?.length > 0) {
+        setLoader(true);
+        setPo_fy("PO number " + addPurchaseorder.rows[0].po_fy);
+        setId(addPurchaseorder.rows[0].id);
+        setPoNumId(addPurchaseorder.rows[0].po_number_id);
+        setArticleNoId(addPurchaseorder.rows[0].article_id);
+        setLoader(false);
       }
-    }}catch(error){
-      console.log('this is error',error);
-      CustomToast(200,'Updated')
+
+      if (addPurchaseorder.data === 200) {
+        form.reset({
+          article_id: "",
+          vendor_id: "",
+          remarks: "",
+          workorder_id: "",
+          color: [],
+          color_quantity: [],
+          size: [],
+          ratio: "",
+          category: "",
+          sub_category: "",
+          serial: "",
+          style_description: "",
+          brand: "",
+          num_packs: "",
+        });
+        form.setValue("remarks", form.getValues("remarks"));
+        form.setValue("color_quantity", form.getValues("color_quantity"));
+        form.setValue("workorder_id", "");
+        form.setValue("color", []);
+        form.setValue("color_quantity", []);
+        setLoader(true);
+        SetNewArticle(true);
+        setLoader(false);
+
+        CustomToast(200, "Data successfuly added");
+        navigate(`/editPO/${redirectId}`);
+      }
+      fetchPOD();
+    } catch (error) {
+      fetchPOD();
+      console.log("Lafda", error);
+    } finally {
+      setLoader(true);
+      fetchPOD();
+      setLoader(false);
+      console.log("finally");
     }
   };
 
-  const [loader, setLoader] = useState(true);  
+  const [loader, setLoader] = useState(true);
   const [po_num, setPo_num] = useState("");
-   
-  const artID = form.watch('article_id') 
-  console.log('article id=>',artID);
-  const fetchSingle = async (id: number) => {
+
+  const fetchSingle = async () => {
     const resPO = await fetchsinglePO(editId);
-    console.log('single',resPO);
-    const message =  
+    console.log("single", resPO);
+    setPo_fy("Purchase Number: " + resPO.message.po_fy);
+    const message =
       typeof resPO.message === "string"
         ? JSON.parse(resPO.message)
         : resPO.message;
-    setPo_num("PO number :"+message.po_fy);
+    setPo_num("PO number :" + message.po_fy);
+    const mappedColorQuantities = (message.color || []).map(
+      (color: any, index: number) => ({
+        color_id: color.id,
+        quantity: message.num_packs?.[index] ?? "",
+      })
+    );
     form.reset({
-      article_id : message.articleid,   
+      article_id: message.article_id,
       purchase_number: message.po_fy,
       vendor_id: message.vendor_id,
-      remarks: message.remarks, 
-      po_date: message.po_date ? new Date(message.po_date) : null,
+      remarks: message.remarks,
+      po_date: message.po_date ? new Date(message.po_date) : new Date(),
+      ratio: message.article_ratios,
+      color: message.color || "nothing",
+      workorder_id: message.workorder_id,
+      workorder_date: message.workorder_date
+        ? new Date(message.po_date)
+        : new Date(),
+      size: message.size,
+      color_quantity: mappedColorQuantities,
+      num_packs: Array.isArray(message.num_packs)
+        ? message.num_packs.join(", ")
+        : message.num_packs,
     });
+    setSelectedColors(message.color || []);
+    setSelectedOptions(message.size || []);
     setLoader(false);
   };
 
   useEffect(() => {
     if (editId) {
-      fetchSingle(editId);
+      fetchSingle();
     } else {
       setLoader(false);
     }
@@ -281,65 +318,65 @@ const Addpurchase = () => {
     getYear();
   }, []);
 
-  const handleColoronChange = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
-    const quantities = form.watch('color_quantity') || [];
+  const handleColoronChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    idx: number
+  ) => {
+    const quantities = form.watch("color_quantity") || [];
     quantities[idx] = { quantity: e.target.value };
-    form.setValue('color_quantity', quantities);
-    const numPacks = quantities.map(item => item.quantity).join(',');
-    form.setValue('num_packs', numPacks);
-    
-  } 
-  const [podTable, setPodtable] = useState<any>([]);
- 
-  const fetchPOD = async () => {
-    
-    try{
-      const tab = await fetchPODtable(editId) 
-      console.log('it runs');
-      setPodtable(tab.message);       
-    }catch(error){
-      
-      console.log('PROBLEM IS',error);   
-    }   
-  }; 
+    form.setValue("color_quantity", quantities);
+    const numPacks = quantities.map((item) => item.quantity).join(",");
+    form.setValue("num_packs", numPacks);
+  };
 
-  useEffect(() => { 
-    if(editId){
-      fetchPOD();    
+  const [podTable, setPodtable] = useState<any>([]);
+
+  const fetchPOD = async () => {
+    try {
+      const tab = await fetchPODtable(editId);
+      setPodtable(tab.message);
+    } catch (error) {
+      console.log("PROBLEM IS", error);
     }
-  }, [editId,callTable]);
-  
+  };
+
+  useEffect(() => {
+    if (editId) {
+      fetchPOD();
+    }
+  }, [editId, callTable]);
+
   //POD table
 
   interface PODtable {
-    id:number,
+    id: number;
     no: number;
     article_number: number;
-    brand_name: string; 
+    brand_name: string;
     category_name: string;
     pieces: number;
-    serial: number;  
+    serial: number;
     subcategory_name: string;
-    vendor_name: string; 
+    vendor_name: string;
   }
 
-  const handleDelete = async(id:number)=>{
-    try{              
-      const del = await deletePO(id)     
-      fetchPOD()   
+  const handleDelete = async (id: number) => {
+    try {
+      const del = await deletePO(id);
+      fetchPOD();
       if (podTable.length === 1) {
-        setPodtable([])
+        setPodtable([]);
       }
       if (podTable.length === 0) {
-        setPodtable([])
+        setPodtable([]);
       }
-      if(del.statusCode === 200){
-        CustomToast(200,'Successfully deleted')
+      if (del.statusCode === 200) {
+        CustomToast(200, "Successfully deleted");
       }
-    }catch(error){
-      CustomToast(500,'Error occured deleting')
+    } catch (error) {
+      CustomToast(500, "Error occured deleting");
     }
-  }
+  };
 
   const podColumn: ColumnDef<PODtable>[] = [
     {
@@ -360,7 +397,7 @@ const Addpurchase = () => {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="VENDOR" />
       ),
-    }, 
+    },
     {
       accessorKey: "category_name",
       header: ({ column }) => (
@@ -409,9 +446,7 @@ const Addpurchase = () => {
             </div>
             <div>
               <span>
-                <FilePenLine
-                  onClick={() => navigate(`/editPO/${data.id}`)}
-                />
+                <FilePenLine onClick={() => navigate(`/editPO/${data.id}`)} />
               </span>
             </div>
           </div>
@@ -427,15 +462,17 @@ const Addpurchase = () => {
       </div>
     );
   }
-   
-  return ( 
+
+  return (
     <div className="">
       <Card className="w-[100%]">
         <CardHeader>
           <div className="flex justify-between">
-            {poNumber} - PurchaseOrder <span> {po_fy}</span> 
+            {po_fy}{" "}
+            {po_fy && (
+              <span className="bg-gray-600 rounded-lg p-5"> {po_fy}</span>
+            )}
           </div>
-          <CardDescription>{poNumber} Purchase order here...</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(submit)}>
@@ -459,7 +496,7 @@ const Addpurchase = () => {
                     <FormMessage />
                   </FormItem>
                 )}
-              /> 
+              />
               <FormField
                 control={form.control}
                 name="vendor_id"
@@ -526,12 +563,15 @@ const Addpurchase = () => {
                           field.onChange(value);
                           setarticlefield(true);
                           getSingleArticle(Number(value));
-                          console.log('my value',value);
+                          console.log("my value", value);
                         }}
                         value={field.value}
                       >
                         <SelectTrigger className="w-52">
-                          <SelectValue placeholder="Select Article" defaultValue={field.value}/>
+                          <SelectValue
+                            placeholder="Select Article"
+                            defaultValue={field.value}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -672,7 +712,6 @@ const Addpurchase = () => {
                         <PopoverContent className="w-auto " align="start">
                           <Calendar
                             mode="single"
-                            
                             onSelect={field.onChange}
                             selected={field.value}
                             disabled={(date) =>
@@ -698,6 +737,7 @@ const Addpurchase = () => {
                     <FormLabel>Select workorder</FormLabel>
                     <FormControl>
                       <Select
+                        value={field.value || ""}
                         onValueChange={(value) => {
                           field.onChange(value);
                         }}
@@ -724,28 +764,25 @@ const Addpurchase = () => {
                   </FormItem>
                 )}
               />
-                    {/*hidden*/}
-                     <FormField
-                      control={form.control}
-                      name="num_packs"
-                      render={({field})=>(
-                        <FormItem>
-                          
-                          <FormControl>
-                            <Input {...field} placeholder="Numpacks" type="hidden"></Input>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                      />
+              {/*hidden*/}
+              <FormField
+                control={form.control}
+                name="num_packs"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input {...field} placeholder="Numpacks"></Input>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <span className="mt-2">
                 <FormField
                   control={form.control}
                   name="workorder_date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>
-                        Workorder date 
-                      </FormLabel>
+                      <FormLabel>Workorder date</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -781,7 +818,6 @@ const Addpurchase = () => {
                     </FormItem>
                   )}
                 />
-                
               </span>
               {articlefield && (
                 <>
@@ -804,10 +840,10 @@ const Addpurchase = () => {
                                         .slice(0, 2)
                                         .map((color) => (
                                           <span
-                                            key={color}
+                                            key={color.id}
                                             className="bg-orange-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
                                           >
-                                            <span>{color}</span>
+                                            <span>{color.name}</span>
                                             <button
                                               type="button"
                                               className="text-red-500 hover:text-red-700"
@@ -815,10 +851,51 @@ const Addpurchase = () => {
                                                 e.stopPropagation();
                                                 const updated =
                                                   selectedColors.filter(
-                                                    (c) => c !== color
+                                                    (c) => c.id !== color.id
                                                   );
+
                                                 setSelectedColors(updated);
-                                                field.onChange(updated);
+                                                field.onChange(
+                                                  updated.map((c) => ({
+                                                    id: c.id,
+                                                    name: c.name,
+                                                  }))
+                                                );
+
+                                                // Get current num_packs value
+                                                const currentNumPacks =
+                                                  form.getValues("num_packs") ||
+                                                  "";
+
+                                                // Split num_packs into an array
+                                                const numPacksArray =
+                                                  currentNumPacks
+                                                    ? currentNumPacks.split(",")
+                                                    : [];
+
+                                                // Find the index to remove based on the deselected color's id
+                                                const indexToRemove =
+                                                  selectedColors.findIndex(
+                                                    (color) =>
+                                                      color.id === color.id
+                                                  );
+
+                                                // Remove the corresponding number from num_packs
+                                                if (indexToRemove !== -1) {
+                                                  const updatedNumPacksArray =
+                                                    numPacksArray.filter(
+                                                      (_, i) =>
+                                                        i !== indexToRemove
+                                                    );
+                                                  const updatedNumPacks =
+                                                    updatedNumPacksArray.join(
+                                                      ","
+                                                    );
+                                                  form.setValue(
+                                                    "num_packs",
+                                                    updatedNumPacks
+                                                  );
+                                                }
                                               }}
                                             >
                                               ✕
@@ -841,31 +918,45 @@ const Addpurchase = () => {
                                   <SelectLabel>Color</SelectLabel>
                                   {colors &&
                                     colors.map((value: any) => {
-                                      const isChecked = selectedColors.includes(
-                                        value.name.toString()
+                                      const isChecked = selectedColors.some(
+                                        (c) => c.id === value.id
                                       );
 
                                       return (
                                         <div
                                           key={value.id}
-                                          className={`flex items-center px-3 py-2 cursor-pointer ${
-                                            isChecked ? "" : ""
-                                          }`}
+                                          className="flex items-center px-3 py-2 cursor-pointer"
                                           onClick={() => {
                                             let updated;
                                             if (isChecked) {
                                               updated = selectedColors.filter(
-                                                (c) => c !== value.name.toString()
+                                                (c) => c.id !== value.id
                                               );
                                             } else {
                                               updated = [
                                                 ...selectedColors,
-                                                value.name.toString(),
+                                                {
+                                                  id: value.id,
+                                                  name: value.name,
+                                                },
                                               ];
-                                              setColorQuant(true);
                                             }
                                             setSelectedColors(updated);
-                                            field.onChange(updated);
+                                            field.onChange(
+                                              updated.map((c) => ({
+                                                id: c.id,
+                                                name: c.name,
+                                              }))
+                                            );
+
+                                            // Manually handle num_packs if needed
+                                            const updatedNumPacks = updated
+                                              .map((c) => c.id)
+                                              .join(",");
+                                            form.setValue(
+                                              "num_packs",
+                                              updatedNumPacks
+                                            ); // Manually set the value
                                           }}
                                         >
                                           <input
@@ -897,7 +988,7 @@ const Addpurchase = () => {
                           Size <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Select>
+                          <Select value={field.value || []}>
                             <Popover>
                               <PopoverTrigger asChild>
                                 <SelectTrigger className="w-52 flex flex-wrap min-h-[40px] gap-0.5 p-1">
@@ -907,10 +998,10 @@ const Addpurchase = () => {
                                         .slice(0, 3)
                                         .map((option: any) => (
                                           <span
-                                            key={option}
+                                            key={option.id}
                                             className="bg-blue-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
                                           >
-                                            <span>{option}</span>
+                                            <span>{option.name}</span>
                                             <button
                                               type="button"
                                               className="text-red-500 hover:text-red-700"
@@ -943,8 +1034,8 @@ const Addpurchase = () => {
                                 <SelectGroup>
                                   <SelectLabel>Sizes</SelectLabel>
                                   {selectedSizes.map((value: any) => {
-                                    const isChecked = selectedOptions.includes(
-                                      value.id.toString()
+                                    const isChecked = selectedOptions.some(
+                                      (o: any) => o.id === value.id
                                     );
                                     return (
                                       <div
@@ -953,12 +1044,14 @@ const Addpurchase = () => {
                                         onClick={() => {
                                           const updated = isChecked
                                             ? selectedOptions.filter(
-                                                (o: any) =>
-                                                  o !== value.id.toString()
+                                                (o: any) => o.id !== value.id
                                               )
                                             : [
                                                 ...selectedOptions,
-                                                value.id.toString(),
+                                                {
+                                                  id: value.id,
+                                                  name: value.name,
+                                                },
                                               ];
                                           setSelectedOptions(updated);
                                           field.onChange(updated);
@@ -983,7 +1076,7 @@ const Addpurchase = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="ratio"
@@ -1001,7 +1094,6 @@ const Addpurchase = () => {
                   />
                 </>
               )}
-             
             </div>
             {selectedColors.length > 0 && (
               <div className="flex flex-wrap p-5 gap-5">
@@ -1013,20 +1105,22 @@ const Addpurchase = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Enter Color {color} quantity
+                          Enter Color {color.name} quantity
                           <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} onChange={(e) => {
-                          field.onChange(e);
-                          handleColoronChange(e, idx);
-                         }}></Input>
+                          <Input
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleColoronChange(e, idx);
+                            }}
+                          ></Input>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
                 ))}
               </div>
             )}
@@ -1039,7 +1133,7 @@ const Addpurchase = () => {
           </form>
         </Form>
       </Card>
-      {!isNaN(editId)  ? (
+      {!isNaN(editId) ? (
         <div className="">
           <DataTable columns={podColumn} data={podTable} />
         </div>
