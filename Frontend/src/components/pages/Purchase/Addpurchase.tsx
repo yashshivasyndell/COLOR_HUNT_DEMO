@@ -582,7 +582,7 @@ const Addpurchase = () => {
                           field.onChange(value);
                           setarticlefield(true);
                           getSingleArticle(Number(value));
-                          console.log("my value", value);
+                          
                         }}
                         value={field.value}
                       >
@@ -937,7 +937,6 @@ const Addpurchase = () => {
                                       const isChecked = selectedColors.some(
                                         (c) => c.id === value.id
                                       );
-
                                       return (
                                         <div
                                           key={value.id}
@@ -948,11 +947,11 @@ const Addpurchase = () => {
                                               updated = selectedColors.filter(
                                                 (c) => c.id !== value.id
                                               );
-                                            } else {
+                                            }else{
                                               updated = [
                                                 ...selectedColors,
                                                 {
-                                                  id: value.id,
+                                                  id: value.id, 
                                                   name: value.name,
                                                 },
                                               ];
