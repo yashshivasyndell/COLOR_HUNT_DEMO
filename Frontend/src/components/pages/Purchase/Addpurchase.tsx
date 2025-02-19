@@ -1,5 +1,5 @@
 import { Button } from "../../ui/button";
-import { redirect, useNavigate, useSearchParams } from "react-router-dom";
+import {useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardDescription, CardHeader } from "../../ui/card";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,7 +48,7 @@ import { useParams } from "react-router-dom";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../Table/data-table-column-header";
 import { DataTable } from "../Table/data-table";
-import { Value } from "@radix-ui/react-select";
+
 
 const Addpurchase = () => {
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ const Addpurchase = () => {
     po_date: z.date({ message: "Po date is must" }),
     num_packs: z.union([z.number(), z.string()]).optional(),
     remarks: z.string({ message: "Remarks are must" }),
-    workorder_id: z.union([z.number(), z.string()]).optional(),
+    workorder_id: z.union([z.number(), z.string(), z.null()]).optional(),
     workorder_date: z.date().optional(),
     category: z.string().or(z.number()).or(z.null()).optional(),
     sub_category: z.string().or(z.number()).or(z.null()).optional(),
@@ -84,7 +84,7 @@ const Addpurchase = () => {
         name: z.string(),
       })
     ),
-    ratio: z.string({ message: "Please enter valid ratio for size" }).refine(
+    ratio: z.string().refine(
       (val) => {
         const selectedOptionsLength = selectedOptions.length;
         const values = val.split(",");
@@ -103,7 +103,7 @@ const Addpurchase = () => {
       .union([z.number({ message: "Weight is a must" }), z.string()])
       .optional(),
     color_quantity: z.array(
-      z.object({
+      z.object({  
         color_id: z
           .union([
             z.string({ message: "color id is req" }),
@@ -133,19 +133,18 @@ const Addpurchase = () => {
     mode: "onChange",
   });
 
-  console.log("type of", typeof form.getValues("num_packs"));
+  
+
   const [articles, setArticles] = useState<any>([]);
   const [articlefield, setarticlefield] = useState(false);
   const [vendor, setVendor] = useState<any>([]);
   const [colorQuant, setColorQuant] = useState(false);
   const [colors, setColor] = useState<any>([]);
   const [selectedColors, setSelectedColors] = useState<
-    { id: number; name: string }[]
-  >([]);
+    { id: number; name: string }[]>([]);
 
   const [selectedSizes, setSelectedSizes] = useState<
-    { id: number; name: string }[]
-  >([]);
+    { id: number; name: string }[]>([]);
   const [workorder, setWorkorder] = useState([]);
 
   const getYear = async () => {
@@ -233,7 +232,7 @@ const Addpurchase = () => {
           color: [],
           color_quantity: [],
           size: [],
-          ratio: "",
+          ratio: " ",
           category: "",
           sub_category: "",
           serial: "",
@@ -241,11 +240,15 @@ const Addpurchase = () => {
           brand: "",
           num_packs: "",
         });
+     
         form.setValue("remarks", form.getValues("remarks"));
         form.setValue("color_quantity", form.getValues("color_quantity"));
         form.setValue("workorder_id", "");
-        form.setValue("color", []);
-        form.setValue("color_quantity", []);
+        form.setValue("color", form.getValues("color"));
+        form.setValue("color_quantity", form.getValues("color_quantity"));
+        // 
+        
+        form.setValue("vendor_id", form.getValues("vendor_id"));
         setLoader(true);
         SetNewArticle(true);
         setLoader(false);
@@ -258,12 +261,28 @@ const Addpurchase = () => {
       fetchPOD();
       console.log("Lafda", error);
     } finally {
-      setLoader(true);
-      fetchPOD();
-      setLoader(false);
-      console.log("finally");
+      if (editId) {
+        form.reset({
+          color: [],
+          color_quantity: [],
+          size: [],
+          ratio: "",
+        });
+       
+      } else {
+        form.reset();
+        
+        form.setValue("color", []);
+        form.setValue("color_quantity", []);
+        form.setValue("ratio", " ");
+        setLoader(true);
+        fetchPOD();
+        setLoader(false);
+      }
     }
   };
+
+  // const [ratioString, setRatioString] = useState<string>("");
 
   const [loader, setLoader] = useState(true);
   const [po_num, setPo_num] = useState("");
@@ -293,7 +312,7 @@ const Addpurchase = () => {
       color: message.color || "nothing",
       workorder_id: message.workorder_id,
       workorder_date: message.workorder_date
-        ? new Date(message.po_date)
+        ? new Date(message.workorder_date)
         : new Date(),
       size: message.size,
       color_quantity: mappedColorQuantities,
@@ -761,6 +780,7 @@ const Addpurchase = () => {
                         </SelectContent>
                       </Select>
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -769,7 +789,7 @@ const Addpurchase = () => {
                 control={form.control}
                 name="num_packs"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="hidden">
                     <FormControl>
                       <Input {...field} placeholder="Numpacks"></Input>
                     </FormControl>
@@ -862,25 +882,21 @@ const Addpurchase = () => {
                                                   }))
                                                 );
 
-                                                // Get current num_packs value
                                                 const currentNumPacks =
                                                   form.getValues("num_packs") ||
                                                   "";
 
-                                                // Split num_packs into an array
                                                 const numPacksArray =
                                                   currentNumPacks
                                                     ? currentNumPacks.split(",")
                                                     : [];
 
-                                                // Find the index to remove based on the deselected color's id
                                                 const indexToRemove =
                                                   selectedColors.findIndex(
                                                     (color) =>
                                                       color.id === color.id
                                                   );
 
-                                                // Remove the corresponding number from num_packs
                                                 if (indexToRemove !== -1) {
                                                   const updatedNumPacksArray =
                                                     numPacksArray.filter(
@@ -949,14 +965,13 @@ const Addpurchase = () => {
                                               }))
                                             );
 
-                                            // Manually handle num_packs if needed
                                             const updatedNumPacks = updated
                                               .map((c) => c.id)
                                               .join(",");
                                             form.setValue(
                                               "num_packs",
                                               updatedNumPacks
-                                            ); // Manually set the value
+                                            );
                                           }}
                                         >
                                           <input
@@ -978,124 +993,159 @@ const Addpurchase = () => {
                       </FormItem>
                     )}
                   />
-<FormField
-  control={form.control}
-  name="size"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>
-        Size <span className="text-red-400">*</span>
-      </FormLabel>
-      <FormControl>
-        <Select value={field.value || []}>
-          <Popover>
-            <PopoverTrigger asChild>
-              <SelectTrigger className="w-52 flex flex-wrap min-h-[40px] gap-0.5 p-1">
-                {selectedOptions.length > 0 ? (
-                  <>
-                    {selectedOptions.slice(0, 3).map((option: any) => (
-                      <span
-                        key={option.id}
-                        className="bg-blue-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
-                      >
-                        <span>{option.name}</span>
-                        <button
-                          type="button"
-                          className="text-red-500 hover:text-red-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const updated = selectedOptions.filter(
-                              (o: any) => o.id !== option.id
-                            );
-                            setSelectedOptions(updated);
-                            field.onChange(updated);
+                  <FormField
+                    control={form.control}
+                    name="size"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Size <span className="text-red-400">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Select value={field.value || []}>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <SelectTrigger className="w-52 flex flex-wrap min-h-[40px] gap-0.5 p-1">
+                                  {selectedOptions.length > 0 ? (
+                                    <>
+                                      {selectedOptions
+                                        .slice(0, 3)
+                                        .map((option: any) => (
+                                          <span
+                                            key={option.id}
+                                            className="bg-blue-300 text-gray-700 px-2 py-1 rounded flex items-center space-x-1"
+                                          >
+                                            <span>{option.name}</span>
+                                            <button
+                                              type="button"
+                                              className="text-red-500 hover:text-red-700"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const updated =
+                                                  selectedOptions.filter(
+                                                    (o: any) =>
+                                                      o.id !== option.id
+                                                  );
+                                                setSelectedOptions(updated);
+                                                field.onChange(updated);
 
-                            // Remove the corresponding ratio value for the deselected option
-                            const updatedRatios = updated.map(() => "0"); // Adjust default ratio logic if necessary
-                            form.setValue("ratio", updatedRatios.join(","));
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                    {selectedOptions.length > 3 && (
-                      <span className="text-gray-500 ">
-                        + {selectedOptions.length - 3} more
-                      </span>
+                                                // const ratioArray = ratioString
+                                                //   .split(",")
+                                                //   .map((r) => r.trim());
+                                                // ratioArray.splice(
+                                                //   selectedOptions.indexOf(
+                                                //     option
+                                                //   ),
+                                                //   1
+                                                // );
+                                                // const newRatioString =
+                                                //   ratioArray.join(", ");
+
+                                                // setRatioString(newRatioString);
+                                                // form.setValue(
+                                                //   "ratio",
+                                                //   newRatioString
+                                                // );
+                                              }}
+                                            >
+                                              ✕
+                                            </button>
+                                          </span>
+                                        ))}
+                                      {selectedOptions.length > 3 && (
+                                        <span className="text-gray-500 ">
+                                          + {selectedOptions.length - 3} more
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <SelectValue placeholder="Select Sizes" />
+                                  )}
+                                </SelectTrigger>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-52">
+                                <SelectGroup>
+                                  <SelectLabel>Sizes</SelectLabel>
+                                  {selectedSizes.map((value: any) => {
+                                    const isChecked = selectedOptions.some(
+                                      (o: any) => o.id === value.id
+                                    );
+                                    return (
+                                      <div
+                                        key={value.id}
+                                        className="flex items-center px-3 py-2 cursor-pointer"
+                                        onClick={() => {
+                                          let updated: any[];
+
+                                          if (isChecked) {
+                                            updated = selectedOptions.filter(
+                                              (o: any) => o.id !== value.id
+                                            );
+                                            // const ratioArray = ratioString
+                                            //   .split(",")
+                                            //   .map((r) => r.trim());
+                                            // ratioArray.splice(
+                                            //   selectedOptions.indexOf(value),
+                                            //   1
+                                            // );
+                                            // const newRatioString =
+                                            //   ratioArray.join(", ");
+
+                                            // setRatioString(newRatioString);
+                                            // form.setValue(
+                                            //   "ratio",
+                                            //   newRatioString
+                                            // );
+                                          } else {
+                                            updated = [
+                                              ...selectedOptions,
+                                              {
+                                                id: value.id,
+                                                name: value.name,
+                                              },
+                                            ];
+                                          }
+
+                                          setSelectedOptions(updated);
+                                          field.onChange(updated);
+                                        }}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          readOnly
+                                          className="mr-2"
+                                        />
+                                        {value.name}
+                                      </div>
+                                    );
+                                  })}
+                                </SelectGroup>
+                              </PopoverContent>
+                            </Popover>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </>
-                ) : (
-                  <SelectValue placeholder="Select Sizes" />
-                )}
-              </SelectTrigger>
-            </PopoverTrigger>
-            <PopoverContent className="w-52">
-              <SelectGroup>
-                <SelectLabel>Sizes</SelectLabel>
-                {selectedSizes.map((value: any) => {
-                  const isChecked = selectedOptions.some(
-                    (o: any) => o.id === value.id
-                  );
-                  return (
-                    <div
-                      key={value.id}
-                      className="flex items-center px-3 py-2 cursor-pointer"
-                      onClick={() => {
-                        const updated = isChecked
-                          ? selectedOptions.filter((o: any) => o.id !== value.id)
-                          : [
-                              ...selectedOptions,
-                              { id: value.id, name: value.name },
-                            ];
-                        setSelectedOptions(updated);
-                        field.onChange(updated);
+                  />
 
-                        // Dynamically update the ratio values when options are selected/deselected
-                        const updatedRatios = updated.map(() => "0"); // Adjust default ratio logic
-                        form.setValue("ratio", updatedRatios.join(","));
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        readOnly
-                        className="mr-2"
-                      />
-                      {value.name}
-                    </div>
-                  );
-                })}
-              </SelectGroup>
-            </PopoverContent>
-          </Popover>
-        </Select>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-<FormField
-  control={form.control}
-  name="ratio"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>
-        Ratio <span className="text-red-400">*</span>
-      </FormLabel>
-      <FormControl>
-        <Input
-          {...field}
-          value={field.value} // Display the updated ratios here
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-
+                  <FormField
+                    control={form.control}
+                    name="ratio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ratio</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </>
               )}
             </div>

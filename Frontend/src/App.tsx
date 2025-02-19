@@ -40,6 +40,8 @@ import AddPartyMaster from "./components/pages/Master/AddPartyMaster";
 import Article from "./components/pages/Master/Article";
 import Addarticle from "./components/pages/Master/Addarticle";
 import Addpurchase from "./components/pages/Purchase/Addpurchase";
+import Inward from "./components/pages/Master/Inward";
+import Add_inward from "./components/pages/Master/Add_inward";
 
 
 
@@ -74,6 +76,9 @@ function App() {
 
             <Route path="/purchase" element={<PurchaseList />} />
             <Route path="/add" element={<Addpurchase />} />
+            <Route path="/add" element={<Addpurchase />} />
+            <Route path="/inward" element={<Inward />} />
+            <Route path="/add-inward" element={<Add_inward />} />
             <Route path="/editPO/:id" element={<Addpurchase />} />
             <Route path="/sales" element={<SalesList />} />
 

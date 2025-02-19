@@ -40,7 +40,6 @@ const getCategoryList = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 const getSingleCategoryDetails = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
   try {
@@ -2294,13 +2293,11 @@ const addArticle = async (req, res) => {
     return res.status(400).json(new ApiResponse(400, "Failed to add article"));
   } catch (error) {
     console.log("error catch ", error.message);
-    return res
-      .status(500)
-      .json({
-        message: "error in api catch",
-        cause: error.message,
-        stack: error.stack,
-      });
+    return res.status(500).json({
+      message: "error in api catch",
+      cause: error.message,
+      stack: error.stack,
+    });
   } finally {
     client.release();
   }
@@ -2548,12 +2545,10 @@ const addPurchaseOrder = async (req, res) => {
       const Generated_po_num = await getPurchaseOrderNumber();
 
       if (Generated_po_num.error) {
-        return res
-          .status(500)
-          .json({
-            message: "Error fetching PO number",
-            cause: Generated_po_num.error,
-          });
+        return res.status(500).json({
+          message: "Error fetching PO number",
+          cause: Generated_po_num.error,
+        });
       }
 
       const poNumber =
@@ -2682,13 +2677,15 @@ const addPurchaseOrder = async (req, res) => {
         );
         if (byPODid.length > 0) {
           const { rows: directUpdate } = await client.query(
-            "UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2 WHERE id = $3 RETURNING po_number_id as id",
-            [num_packs, size_ratio, Id]
+            "UPDATE purchase_order_details SET num_packs = $1, size_ratio = $2,work_order_status_id=$3,work_order_date=$4 WHERE id = $5 RETURNING po_number_id as id",
+            [num_packs, size_ratio,workorder_id,workorder_date,Id,]
           );
           if (directUpdate.length > 0) {
-            return res
-              .status(200)
-              .json({ message: "Successfully added data in pod", data: 200, rows:directUpdate });
+            return res.status(200).json({
+              message: "Successfully added data in pod",
+              data: 200,
+              rows: directUpdate,
+            });
           }
         } else {
           const { rows: existingArticle } = await client.query(
@@ -2719,18 +2716,18 @@ const addPurchaseOrder = async (req, res) => {
       }
       const { rows } = await client.query(
         `WITH inserted AS (
-  INSERT INTO purchase_order_details
+    INSERT INTO purchase_order_details
     (po_number_id, article_id, num_packs, work_order_status_id, work_order_date, size_ratio)
-  VALUES ($1, $2, $3, $4, $5, $6)
-  ON CONFLICT (po_number_id, article_id)
-  DO UPDATE SET
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (po_number_id, article_id)
+    DO UPDATE SET
     num_packs = EXCLUDED.num_packs,
     size_ratio = EXCLUDED.size_ratio
-  RETURNING po_number_id AS id
-)
-SELECT 
-  i.id, 
-  pn.po_fy
+    RETURNING po_number_id AS id
+    )
+    SELECT 
+    i.id, 
+    pn.po_fy
 FROM inserted i
 JOIN purchase_number pn ON pn.id = i.id`,
         [
@@ -2841,12 +2838,10 @@ const getPurchaseOrderList = async (req, res) => {
     }
   } catch (error) {
     console.error("Error in getPurchaseOrderList:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error fetching purchase order list",
-        error: error.message,
-      });
+    return res.status(500).json({
+      message: "Error fetching purchase order list",
+      error: error.message,
+    });
   } finally {
     client.release();
   }
@@ -2967,12 +2962,11 @@ const deletePoNumber = async (req, res) => {
   console.log("PO Number ID:", id);
 
   try {
-
     const { rows: deleteColor } = await client.query(
       "DELETE FROM ARTICLE_COLOR WHERE ARTICLE_ID IN (SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1)",
       [id]
     );
-    
+
     const { rows: deleteSize } = await client.query(
       "DELETE FROM ARTICLE_SIZE WHERE ARTICLE_ID IN (SELECT ARTICLE_ID FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1)",
       [id]
@@ -2982,46 +2976,42 @@ const deletePoNumber = async (req, res) => {
       [id]
     );
     // Delete from PURCHASE_ORDER_DETAILS first
-    const {rows:deletePOD} = await client.query(
+    const { rows: deletePOD } = await client.query(
       "DELETE FROM PURCHASE_ORDER_DETAILS WHERE PO_NUMBER_ID = $1",
       [id]
     );
 
-    if(deletePOD)
-    if (deletePOD.rowCount > 0) {
-      // Now delete from PURCHASE_NUMBER
-      const deleteQ = await client.query(
-        "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
-        [id]
-      );
+    if (deletePOD)
+      if (deletePOD.rowCount > 0) {
+        // Now delete from PURCHASE_NUMBER
+        const deleteQ = await client.query(
+          "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
+          [id]
+        );
 
-      if (deleteQ.rowCount > 0) {
-        return res
-          .status(200)
-          .json(
+        if (deleteQ.rowCount > 0) {
+          return res.status(200).json(
             new ApiResponse(200, {
               message: "Deleted successfully",
               data: deleteQ.rows,
             })
           );
-      }
-    } else {
-      const deleteQ = await client.query(
-        "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
-        [id]
-      );
+        }
+      } else {
+        const deleteQ = await client.query(
+          "DELETE FROM PURCHASE_NUMBER WHERE ID = $1 RETURNING *",
+          [id]
+        );
 
-      if (deleteQ.rowCount > 0) {
-        return res
-          .status(200)
-          .json(
+        if (deleteQ.rowCount > 0) {
+          return res.status(200).json(
             new ApiResponse(200, {
               message: "Deleted successfully",
               data: deleteQ.rows,
             })
           );
+        }
       }
-    }
 
     return res
       .status(400)
@@ -3117,7 +3107,7 @@ const fetchSinglePo = async (req, res) => {
         `,
         [id]
       );
-      console.log('details',podData);
+      
       if (podData.length > 0) {
         // Format response for frontend
         const formattedData = podData.map((row) => ({
@@ -3128,8 +3118,8 @@ const fetchSinglePo = async (req, res) => {
           remarks: row.remarks,
           article_id: row.articleid,
           article_number: row.article_num,
-          workorder_id:row.work_order_status_id,
-         workorder_date:row.work_order_date,
+          workorder_id: row.work_order_status_id,
+          workorder_date: row.work_order_date,
           color: row.color_ids
             ? row.color_ids.split(",").map((id, index) => ({
                 id: parseInt(id, 10),
@@ -3215,9 +3205,7 @@ const fetchPO_details = async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, "POD table fetched successfully", rows));
     } else {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, "Exception case"));
+      return res.status(400).json(new ApiResponse(400, "Exception case"));
     }
   } catch (error) {
     console.log("err", error);
