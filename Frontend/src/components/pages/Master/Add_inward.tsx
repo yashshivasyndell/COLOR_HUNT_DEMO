@@ -191,6 +191,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
       updated = [...prev, size];
     }
 
+    
     form.setValue(
       "size",
       updated.map((s) => ({ id: s.id, name: s.name }))
@@ -528,14 +529,14 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                             const isChecked = selectedSizes.some(
                               (s) => s.id === size.id
                             );
-
                             return (
                               <div
                                 key={size.id}
                                 className="flex items-center px-3 py-2 cursor-pointer"
                                 onClick={
-                                  
-                                  () => handleSizeSelect(size)
+                                  () => {
+                                    handleSizeSelect(size)
+                                  }
                                 }
                               >
                                 <input

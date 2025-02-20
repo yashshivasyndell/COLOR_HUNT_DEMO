@@ -102,7 +102,22 @@ const fetchArticleDetails = async(req,res)=>{
 //Add Inward 
 const AddInward= async(req,res)=>{
     const client = await pool.connect()
-    const {rows:addInward} = 
+    const {
+      grn_number,
+      inward_date,
+      remarks,
+      vendor_id,
+      article_id,
+      po_id,
+      color_list,
+      size_list,
+      ratio,
+      stock_ratio_mobile,
+      weight,
+      num_packs,
+    } = req.body;
+      
+    const {rows:addInward} = await client.query('')
 }
 
 
