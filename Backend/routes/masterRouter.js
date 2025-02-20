@@ -82,6 +82,7 @@ const {
   deletePoNumber,
   editPODtable,
 } = require("../controllers/masterController");
+const { fetchArticleDetails } = require("../controllers/InwardController");
 const masterRouter = express.Router();
 
 masterRouter.get("/getSalesPersons", verifyToken,getSalesPersons);
@@ -239,5 +240,8 @@ masterRouter.get("/getSinglePO/:id",verifyToken,fetchSinglePo)
 masterRouter.get("/fetchPODtable/:id",verifyToken,fetchPO_details)
 masterRouter.get("/fetchMainTable",getPurchaseNumberTable)
 masterRouter.post("/editPODTable",editPODtable)
+
+// Inward Routes
+masterRouter.get("/fetchArticleDetails/:id",fetchArticleDetails)
 
 module.exports = masterRouter;

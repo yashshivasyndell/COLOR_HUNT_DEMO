@@ -244,6 +244,9 @@ const deleteWholePO = (id:number):Promise<apiResponse>=>post<apiResponse>(`/mast
 const fetchPODtable = (id:number):Promise<apiResponse>=>get<apiResponse>(`/master/fetchPODtable/${id}`)
 const editPODtable = (id:number):Promise<apiResponse>=>get<apiResponse>(`/master/editPODTable/${id}`)
 
+// Inward apis
+const fetchArticleDetails = (id:number):Promise<apiResponse>=>get<apiResponse>(`/master/fetchArticleDetails/${id}`)
+
 export {
   login,
   logout,
@@ -325,5 +328,6 @@ export {
   fetchPODtable,
   fetchPurchaseNumberTable,
   deleteWholePO,
-  editPODtable
+  editPODtable,
+  fetchArticleDetails
 };

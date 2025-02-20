@@ -1080,21 +1080,7 @@ const Addpurchase = () => {
                                             updated = selectedOptions.filter(
                                               (o: any) => o.id !== value.id
                                             );
-                                            // const ratioArray = ratioString
-                                            //   .split(",")
-                                            //   .map((r) => r.trim());
-                                            // ratioArray.splice(
-                                            //   selectedOptions.indexOf(value),
-                                            //   1
-                                            // );
-                                            // const newRatioString =
-                                            //   ratioArray.join(", ");
-
-                                            // setRatioString(newRatioString);
-                                            // form.setValue(
-                                            //   "ratio",
-                                            //   newRatioString
-                                            // );
+                                           
                                           } else {
                                             updated = [
                                               ...selectedOptions,

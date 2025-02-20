@@ -27,22 +27,25 @@ import {
   SelectValue,
 } from "../../ui/select";
 import {
+  fetchArticleDetails,
   fetcharticles,
   fetchColor,
   fetchSize,
   fetchvendors,
 } from "../../../api";
 import { useEffect, useState } from "react";
+import {  useNavigate } from "react-router-dom";
 
 const Add_inward = () => {
+  const navigate = useNavigate()
   // Zod schema
   const inwardSchema = z.object({
     inward_date: z.date(),
-    remark: z.string().optional(),
+    remark: z.union([z.string(), z.number()]),
     supplier: z.union([z.string(), z.number()]),
     article_no: z.union([z.string(), z.number()]),
     po_number: z.string(),
-    quantity: z.number(),
+    quantity: z.union([z.string(),z.number()]),
     color_flag: z.union([z.string(), z.number()]),
     vendor: z.string(),
     color: z.array(z.object({ id: z.number(), name: z.string() })),
@@ -53,18 +56,15 @@ const Add_inward = () => {
       const isValidSizeList = value.every((v) => /^[0-9]+$/.test(v));
       return isValidSizeList && selectedSizeLen === selectedSizeLen;
     }),
-    stock_ratio: z.number(),
-    color_quantity: z.array(
-      z.object({
-        quantity: z.number(),
-      })
-    ),
-    weight: z.number(),
+    stock_ratio: z.union([z.string(),z.number()]),
+    color_quantity: z.array(z.number()).default([]),
+    weight: z.union([z.string(),z.number()]),
     style_desc: z.string().optional(),
     brand_name: z.string().optional(),
     category: z.string().optional(),
-    series: z.number().optional(),
+    series: z.string().optional(),
     sub_category: z.string().optional(),
+    no_of_peice:z.union([z.string(),z.number()])
   });
 
   const form = useForm<z.infer<typeof inwardSchema>>({
@@ -73,25 +73,27 @@ const Add_inward = () => {
       inward_date: new Date(),
       remark: "",
       supplier: "",
-      artilce_no: "",
+      article_no: "",
       po_number: "",
-      quantity: 0,
+      quantity: "",
       color_flag: "",
       vendor: "",
       color: [],
       size: [],
       ratio: "",
-      stock_ratio: 0,
-      weight: 0,
+      stock_ratio: "",
+      weight: "",
       style_desc: "",
       category: "",
-      series: 0,
+      series: "",
       sub_category: "",
       color_quantity: [],
+      no_of_peice:""
     },
+    
     mode: "onBlur",
   });
-
+  
   const [vendor, SetVendor] = useState<any>([]);
   const [article, SetArticle] = useState([]);
   const [colors, SetColor] = useState([]);
@@ -112,8 +114,7 @@ const Add_inward = () => {
   }, []);
 
   //HandleChange for colors
-  const [selectedColors, setSelectedColors] = useState<
-    { id: number; name: string }[]>([]);
+  const [selectedColors, setSelectedColors] = useState<{ id: number; name: string }[]>([]);
 
   const handleColorSelect = (color: { id: number; name: string }) => {
     setSelectedColors((prev) => {
@@ -139,6 +140,46 @@ const Add_inward = () => {
   //Size 
   const [selectedSizes, setSelectedSizes] = useState<{ id: number; name: string }[]>([]);
 
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleReset = () => {
+    form.reset();
+    setResetKey((prev) => prev + 1); 
+  };
+  //Article selection
+  const handleArticles = async(id:number)=>{
+    const ArticleDetails = await fetchArticleDetails(id)
+    const arrayA = ArticleDetails.data
+    console.log(arrayA);
+    const colorFlag = arrayA[0].colorflag
+    if(colorFlag !== 1){
+        SetColor([])
+        SetSizes([])
+    }else{
+      const cols =await fetchColor()
+      SetColor(cols.data)
+      const siz = await fetchSize()
+      SetSizes(siz.data)
+    }
+    arrayA.map((items:any)=>{
+      form.reset({
+        ...form.getValues(),
+        po_number:items.po_fy || "N/A",
+        quantity:parseInt(items.num_packs) ,
+        color_flag:items.colorflag,
+        vendor:items.vendor_name || "N/A",
+        style_desc:items.style_description || "N/A",
+        brand_name:items.brand_name || "N/A",
+        category:items.category_name || "N/A",
+        sub_category:items.sub_cat_name || "N/A",
+        series:items.series || "N/A"
+      }),
+      { keepDefaultValues: true }
+    })
+    
+  }
+
+  
 const handleSizeSelect = (size: { id: number; name: string }) => {
   setSelectedSizes((prev) => {
     let updated;
@@ -158,19 +199,10 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
     return updated;
   });
 };
-  //Col quantity
-  const handleInputChange = (id: number, value: string) => {
-    setSelectedColors((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, inputValue: value } : c))
-    );
-  
-    form.setValue(
-      "color",
-      selectedColors.map((c) =>
-        c.id === id ? { ...c, inputValue: value } : c
-      )
-    );
-  };
+
+   //Errors of form
+   console.log("Errors",form.formState.errors);
+   
   //Submit function
   const submit = (data:object) => {
     console.log("submit",data);
@@ -193,7 +225,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="inward_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-2 mb-1">
                       INWARD-DATE <span className="text-red-600">*</span>
                     </FormLabel>
                     <Popover>
@@ -237,7 +269,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="remark"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       REMARKS <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -252,7 +284,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="supplier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-center block mb-1">
+                    <FormLabel className="ml-1 block mb-1">
                       Supplier <span className="text-red-500">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange}>
@@ -288,8 +320,16 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Select onValueChange={field.onChange}>
-                        <FormLabel className="block text-center">
+                      <Select
+                      key={resetKey}
+                        value={field.value}
+                        onValueChange={
+                          (id: any) =>{
+                          field.onChange(id.toString())
+                          handleArticles(id.toString())}
+                        }
+                      >
+                        <FormLabel className="block ml-1 mb-1">
                           ARTICLE <span className="text-red-500">*</span>
                         </FormLabel>
                         <SelectTrigger className="w-full lg:w-60 p-5 text-lg">
@@ -320,13 +360,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="po_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       PO NUMBER <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5"
+                      className="bg-gray-500 cursor-not-allowed p-5"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -337,13 +377,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       QUANTITY <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="p-5 cursor-not-allowed bg-gray-300"
+                      className="p-5 cursor-not-allowed bg-gray-500"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -354,13 +394,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="color_flag"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       COLOR FLAG <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="p-5 cursor-not-allowed bg-gray-300"
+                      className="p-5 cursor-not-allowed bg-gray-500"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -371,13 +411,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="vendor"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       VENDOR <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="p-5 bg-gray-300 cursor-not-allowed"
+                      className="p-5 bg-gray-500 cursor-not-allowed"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -392,7 +432,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="color"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       COLOR <span className="text-red-500">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange}>
@@ -455,7 +495,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="size"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       SIZE <span className="text-red-500">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange}>
@@ -493,7 +533,10 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                               <div
                                 key={size.id}
                                 className="flex items-center px-3 py-2 cursor-pointer"
-                                onClick={() => handleSizeSelect(size)}
+                                onClick={
+                                  
+                                  () => handleSizeSelect(size)
+                                }
                               >
                                 <input
                                   className="mr-2"
@@ -517,7 +560,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="ratio"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block mb-1 text-center">
+                    <FormLabel className="block mb-1 ml-1">
                       RATIO <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input {...field} className="p-5"></Input>
@@ -529,11 +572,22 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="stock_ratio"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block mb-1 text-center">
+                    <FormLabel className="block mb-1 ml-1">
                       STOCK RATIO (MOBILE APP){" "}
                       <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Input {...field} className="p-5"></Input>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e)
+                        const value = e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined;
+                          field.onChange(isNaN(value) ? "" : value);
+                      }}
+                      className="p-5"
+                    ></Input>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -542,10 +596,17 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="weight"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block mb-1 text-center">
+                    <FormLabel className="block mb-1 ml-1">
                       WEIGHT <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Input {...field} className="p-5"></Input>
+                    <Input
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(Number(e.target.value) || "")
+                      }
+                      className="p-5"
+                    ></Input>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -557,13 +618,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="style_desc"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       STYLE DESCRIPTION <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5 lg:w-60"
+                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-60"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -574,13 +635,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="brand_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       BRAND <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -591,13 +652,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       CATEGORY <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -608,13 +669,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="series"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       SERIES <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -625,13 +686,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 name="sub_category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       SUB CATEGORY <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-300 cursor-not-allowed p-5 lg:w-52"
+                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-52"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -642,10 +703,10 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
             <div className="grid gap-3 lg:flex lg:gap-14 p-5">
               <FormField
                 control={form.control}
-                name="style_desc"
+                name="no_of_peice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="block text-center mb-1">
+                    <FormLabel className="block ml-1 mb-1">
                       NO OF PEICES <span className="text-red-500">*</span>
                     </FormLabel>
                     <Input {...field} className="p-5 lg:w-60"></Input>
@@ -653,11 +714,11 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                   </FormItem>
                 )}
               />
-              {selectedColors.map((color) => (
+              {selectedColors.map((color, index) => (
                 <FormField
-                  key={color.id}
+                  key={index}
                   control={form.control}
-                  name={`color_quantity.${color.id}`}
+                  name={`color_quantity.${index}`}
                   render={({ field }) => (
                     <FormItem className="-mt-3">
                       <FormLabel className="">
@@ -665,12 +726,16 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                       </FormLabel>
                       <FormControl>
                         <Input
-                        className="p-5 w-56"
+                          className="p-5 w-56"
                           type="text"
                           {...field}
-                          onChange={(e) =>
-                            handleInputChange(color.id, e.target.value)
-                          }
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value: any = e.target.value
+                              ? Number(e.target.value)
+                              : "";
+                            form.setValue(`color_quantity.${index}`, parseFloat(value));
+                          }}
                           placeholder={`Enter value for ${color.name}`}
                         />
                       </FormControl>
@@ -684,15 +749,26 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
             {/*BUTTONS row*/}
             <div className=" lg:flex  lg:justify-between p-5">
               <div>
-                <Button className="mb-5 lg:mb-0 w-20 px-20 bg-green-500 py-5 text-lg">
+                <Button
+                  type="submit"
+                  className="mb-5 lg:mb-0 w-20 px-20 bg-green-500 py-5 text-lg"
+                >
                   Submit
                 </Button>
               </div>
               <div className="flex gap-5">
-                <Button className="w-20 px-20 bg-green-500 py-5 text-lg">
+                <Button
+                  type="button"
+                  onClick={()=>navigate('/inward')}
+                  className="w-20 px-20 bg-green-500 py-5 text-lg"
+                >
                   Back
                 </Button>
-                <Button className="w-20 px-20 bg-green-500 py-5 text-lg">
+                <Button
+                  type="button"
+                  onClick={handleReset}
+                  className="w-20 px-20 bg-green-500 py-5 text-lg"
+                >
                   Cancel
                 </Button>
               </div>
