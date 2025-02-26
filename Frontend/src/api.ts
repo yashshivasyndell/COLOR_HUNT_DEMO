@@ -246,6 +246,10 @@ const editPODtable = (id:number):Promise<apiResponse>=>get<apiResponse>(`/master
 
 // Inward apis
 const fetchArticleDetails = (id:number):Promise<apiResponse>=>get<apiResponse>(`/master/fetchArticleDetails/${id}`)
+const addInward = (payload:object):Promise<apiResponse>=>post<apiResponse>(`/master/inward/addinward`,payload)
+const fetchinwardTable = ():Promise<apiResponse>=>get<apiResponse>("/master/inward/fetchtable")
+const deleteWholeInward = (id:number):Promise<apiResponse>=>post<apiResponse>(`/master/inward/deletewholeinward/${id}`,{})
+const fetchSingleInwardTable = (id:String):Promise<apiResponse>=>post<apiResponse>(`/master/inward/fetchSingleInwardTable`,id)
 
 export {
   login,
@@ -329,5 +333,9 @@ export {
   fetchPurchaseNumberTable,
   deleteWholePO,
   editPODtable,
-  fetchArticleDetails
+  fetchArticleDetails,
+  addInward,
+  fetchinwardTable,
+  deleteWholeInward,
+  fetchSingleInwardTable
 };

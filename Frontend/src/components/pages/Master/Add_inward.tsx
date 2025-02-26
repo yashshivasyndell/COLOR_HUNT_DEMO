@@ -13,7 +13,7 @@ import {
 import { Calendar } from "../../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Button } from "../../ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Eye, PenBox, Trash2 } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { format } from "date-fns";
 import { Input } from "../../ui/input";
@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "../../ui/select";
 import {
+  addInward,
   fetchArticleDetails,
   fetcharticles,
   fetchColor,
@@ -35,6 +36,10 @@ import {
 } from "../../../api";
 import { useEffect, useState } from "react";
 import {  useNavigate } from "react-router-dom";
+import CustomToast from "../../../showToast";
+import { ColumnDef } from "@tanstack/react-table";
+import { DataTableColumnHeader } from "../Table/data-table-column-header";
+import { DataTable } from "../Table/data-table";
 
 const Add_inward = () => {
   const navigate = useNavigate()
@@ -51,11 +56,15 @@ const Add_inward = () => {
     color: z.array(z.object({ id: z.number(), name: z.string() })),
     size: z.array(z.object({ id: z.number(), name: z.string() })),
     ratio: z.string().refine((val) => {
-      const selectedSizeLen = selectedSizes.length;
-      const value = val.split(",");
-      const isValidSizeList = value.every((v) => /^[0-9]+$/.test(v));
-      return isValidSizeList && selectedSizeLen === selectedSizeLen;
-    }),
+      if(selectedSizes.length > 0){
+        const selectedSizeLen = selectedSizes.length;
+        const value = val.split(",");
+        const isValidSizeList = value.every((v) => /^[0-9]+$/.test(v));
+        return isValidSizeList && selectedSizeLen === selectedSizeLen;
+      }else{
+        return true;
+      }
+    },{message:"Enter valid size ratio"}),
     stock_ratio: z.union([z.string(),z.number()]),
     color_quantity: z.array(z.number()).default([]),
     weight: z.union([z.string(),z.number()]),
@@ -66,6 +75,7 @@ const Add_inward = () => {
     sub_category: z.string().optional(),
     no_of_peice:z.union([z.string(),z.number()])
   });
+
 
   const form = useForm<z.infer<typeof inwardSchema>>({
     resolver: zodResolver(inwardSchema),
@@ -98,6 +108,7 @@ const Add_inward = () => {
   const [article, SetArticle] = useState([]);
   const [colors, SetColor] = useState([]);
   const [sizes, SetSizes] = useState([]);
+  const [noOfpeices,setNoofPeice] = useState<boolean>(false)
   //Fetching all selects
   const fetchSelects = async () => {
     const suppliers = await fetchvendors();
@@ -113,6 +124,7 @@ const Add_inward = () => {
     fetchSelects();
   }, []);
 
+  
   //HandleChange for colors
   const [selectedColors, setSelectedColors] = useState<{ id: number; name: string }[]>([]);
 
@@ -139,13 +151,8 @@ const Add_inward = () => {
   };
   //Size 
   const [selectedSizes, setSelectedSizes] = useState<{ id: number; name: string }[]>([]);
-
-  const [resetKey, setResetKey] = useState(0);
-
-  const handleReset = () => {
-    form.reset();
-    setResetKey((prev) => prev + 1); 
-  };
+  const [po_ID,setpo_ID] = useState('')
+ 
   //Article selection
   const handleArticles = async(id:number)=>{
     const ArticleDetails = await fetchArticleDetails(id)
@@ -155,13 +162,16 @@ const Add_inward = () => {
     if(colorFlag !== 1){
         SetColor([])
         SetSizes([])
+        setNoofPeice(true)
     }else{
       const cols =await fetchColor()
       SetColor(cols.data)
       const siz = await fetchSize()
       SetSizes(siz.data)
+      setNoofPeice(false)
     }
     arrayA.map((items:any)=>{
+      setpo_ID(items.pn_id)
       form.reset({
         ...form.getValues(),
         po_number:items.po_fy || "N/A",
@@ -201,19 +211,146 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
   });
 };
 
-   //Errors of form
-   console.log("Errors",form.formState.errors);
+  //  //Errors of form
+  //  console.log("Errors",form.formState.errors);
+   const [sendingStr,SetsendingStr] = useState("Add_inward")
    
+   //GRN STATE
+   const [grn,setGrn] = useState()
+
   //Submit function
-  const submit = (data:object) => {
-    console.log("submit",data);
+  const submit =async (data:any) => {
+    const payload = {
+      grn_number : sendingStr,
+      inward_date : data.inward_date,
+      remarks : data.remark,
+      vendor_id : data.supplier,
+      article_id : data.article_no,
+      po_id : po_ID,
+      po_number : data.po_number,
+      color_list : data.color,
+      size_list : data.size,
+      ratio : data.ratio,
+      stock_ratio_mobile : data.stock_ratio,
+      weight : data.weight,
+      num_packs : data.color_quantity.join(",") || data.no_of_peice,
+      peice : data.no_of_peice
+    }
+   
+    const resp = await addInward(payload)
+    console.log('Added ',resp);
+    if(resp.statusCode === 200){ 
+      setGrn(resp.data.whole_iwnard_number)
+      CustomToast(200,"Inward added successfully")
+      SetsendingStr("")
+    }
+    console.log("submit",payload);
+    form.reset();
+    form.setValue("supplier","")
+    setSelectedColors([])
+    setSelectedSizes([])
+    setTimeout(() => {
+      form.setValue("article_no", "");
+      form.setValue("po_number","")
+      form.setValue("quantity","")
+      form.setValue("color_flag","")
+      form.setValue("vendor","")
+      form.setValue("style_desc","")
+      form.setValue("brand_name","")
+      form.setValue("category","")
+      form.setValue("series","")
+      form.setValue("sub_category","")
+      form.setValue("remark","")
+      
+    }, 0);
   };
+
+  const [table,setTable] = useState([])
+  useEffect(() => {
+    const array1 = localStorage.getItem("inwardData");
+    if (array1) {
+      const newArr = JSON.parse(array1);
+      setTable(newArr.data); 
+      console.log("table",table); 
+    }
+  }, []);
+  //Single Inward Table  
+  interface SingleInward{
+    no:number,
+    id:number,
+    article_number:string,
+    vendor:string,
+    peices:string
+  }
+
+  const singleInwColumn : ColumnDef<SingleInward>[] = [
+    {
+      accessorKey:'no',
+      header:({column})=>(<DataTableColumnHeader column={column} title="S.No"/>),
+      cell:({row})=>(
+        <div className="p-3">{row.index + 1}</div>
+      )
+    },
+    {
+      accessorKey:'article_number',
+      header:({column})=>(<DataTableColumnHeader column={column} title="Article No"/>),
+      cell:({row})=>(
+        <div className="p-3">{row.original.article_number}</div>
+      )
+    },
+    {
+      accessorKey:'vendor',
+      header:({column})=>(<DataTableColumnHeader column={column} title="Vendor"/>),
+      cell:({row})=>(
+        <div className="p-3">{row.original.vendor}</div>
+      )
+    },
+    {
+      accessorKey:'peices',
+      header:({column})=>(<DataTableColumnHeader column={column} title="Peices"/>),
+      cell:({row})=>(
+        <div className="p-3">{row.original.peices}</div>
+      )
+    },
+    {
+      header: 'Action',
+      cell: ({ row }) => {
+        
+        const data = row.original
+        return (
+          <div className="flex gap-3 p-2"> 
+            <div className="p-1 cursor-pointer"> 
+              <Eye />
+            </div>
+            <div className="p-1 cursor-pointer">
+              <Trash2 />
+            </div>
+            <div className="p-1 cursor-pointer">
+              <PenBox  />
+            </div>
+          </div>
+        );
+      }
+    }
+  ]
+
+  //Loader
+  const [loader,setLoader] = useState(false)
+  if(loader){
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-blue-500 font-medium">
+          Loading...
+        </div>
+      </div>
+    )
+  }
   return (
     <div>
       <Card>
         <CardHeader className="flex flex-row justify-between">
           <span className="text-3xl">INWARD</span>
-          <span className="text-3xl">GRN:453/89</span>
+          <span className="text-3xl bg-gray-500 p-1 rounded-full">GRN-NO {grn}</span>
         </CardHeader>
         <hr />
         <Form {...form}>
@@ -274,7 +411,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                       REMARKS <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} className="p-5"></Input>
+                      <Input {...field} placeholder="Enter Remark" className="p-5"></Input>
                     </FormControl>
                   </FormItem>
                 )}
@@ -288,9 +425,9 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <FormLabel className="ml-1 block mb-1">
                       Supplier <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger className="w-full lg:w-52 p-5 text-lg">
-                        <SelectValue placeholder="Supplier" />
+                        <SelectValue placeholder="SELECT SUPPLIER" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
@@ -322,19 +459,19 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                   <FormItem>
                     <FormControl>
                       <Select
-                      key={resetKey}
-                        value={field.value}
+                        value={field.value || ""}
                         onValueChange={
                           (id: any) =>{
                           field.onChange(id.toString())
-                          handleArticles(id.toString())}
+                          handleArticles(id.toString())
+                          }
                         }
                       >
                         <FormLabel className="block ml-1 mb-1">
                           ARTICLE <span className="text-red-500">*</span>
                         </FormLabel>
                         <SelectTrigger className="w-full lg:w-60 p-5 text-lg">
-                          <SelectValue placeholder="Select article" />
+                          <SelectValue placeholder="SELECT ARTICLES" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -564,7 +701,10 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <FormLabel className="block mb-1 ml-1">
                       RATIO <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Input {...field} className="p-5"></Input>
+                    <Input {...field}
+                    disabled={noOfpeices}
+                    className={`p-5 ${noOfpeices ? "bg-gray-400 cursor-not-allowed":""}`}></Input>
+                    <FormMessage/>
                   </FormItem>
                 )}
               />
@@ -702,6 +842,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
             </div>
             {/*fifth row*/}
             <div className="grid gap-3 lg:flex lg:gap-14 p-5">
+            {noOfpeices && 
               <FormField
                 control={form.control}
                 name="no_of_peice"
@@ -715,6 +856,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                   </FormItem>
                 )}
               />
+            }
               {selectedColors.map((color, index) => (
                 <FormField
                   key={index}
@@ -767,7 +909,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                 </Button>
                 <Button
                   type="button"
-                  onClick={handleReset}
+                  
                   className="w-20 px-20 bg-green-500 py-5 text-lg"
                 >
                   Cancel
@@ -777,6 +919,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
           </form>
         </Form>
       </Card>
+      <DataTable columns={singleInwColumn} data={table}/>
     </div>
   );
 };

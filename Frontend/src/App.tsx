@@ -79,6 +79,7 @@ function App() {
             <Route path="/add" element={<Addpurchase />} />
             <Route path="/inward" element={<Inward />} />
             <Route path="/add-inward" element={<Add_inward />} />
+            <Route path="/update-inward" element={<Add_inward />} />
             <Route path="/editPO/:id" element={<Addpurchase />} />
             <Route path="/sales" element={<SalesList />} />
 
