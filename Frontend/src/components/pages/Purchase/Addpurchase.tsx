@@ -484,7 +484,7 @@ const Addpurchase = () => {
 
   return (
     <div className="">
-      <Card className="w-[100%]">
+      <Card className="w-[80%]">
         <CardHeader>
           <div className="flex justify-between">
             {po_fy}{" "}
@@ -1173,7 +1173,7 @@ const Addpurchase = () => {
         </Form>
       </Card>
       {!isNaN(editId) ? (
-        <div className="">
+        <div className="w-[80%]">
           <DataTable columns={podColumn} data={podTable} />
         </div>
       ) : (

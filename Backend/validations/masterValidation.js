@@ -78,8 +78,11 @@ const addOrUpdateParty = joi.object({
     "string.empty": "City cannot be empty",
     "any.required": "City cannot be empty",
   }),
-  outlet_assign: joi.boolean().messages({
-    "boolean.empty": "outlet cannot be empty",
+  outlet_assign: joi.alternatives().try(
+    joi.boolean(),
+    joi.number()
+  ).messages({
+    "alternatives.match": "outlet must be a boolean or a number",
     "any.required": "outlet cannot be empty",
   }),
   pincode: joi.string().required().pattern(/^[1-9][0-9]{5}$/).messages({

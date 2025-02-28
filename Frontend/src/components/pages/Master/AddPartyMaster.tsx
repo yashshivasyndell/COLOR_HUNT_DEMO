@@ -210,7 +210,7 @@ const AddPartyMaster = () => {
         <div className="p-2">Party - Add</div>
         <hr />
         <form className="">
-          <div className="mx-10 lg:flex gap-6 mt-5">
+          <div className="mx-10 xl:flex justify-around gap-6 mt-5">
             <div className="grid gap-3 mb-3">
               <Label htmlFor="">Party Name</Label>
               <Input
@@ -233,7 +233,7 @@ const AddPartyMaster = () => {
                 <div className="text-red-500">{errors.address.message}</div>
               )}
             </div>
-            <div className="flex flex-col items-start  gap-3">
+            <div className="flex flex-col items-start gap-3">
               <Label htmlFor="">Phone Number *</Label>
               <Input
                 {...register("phone_no")}
@@ -243,10 +243,8 @@ const AddPartyMaster = () => {
               {errors.phone_no && (
                 <div className="text-red-500">{errors.phone_no.message}</div>
               )}
-              
-          
             </div>
-            <div className="grid gap- mb-3 mt-3">
+            <div className="grid gap-2 mb-3">
               <Label htmlFor="">Email</Label>
               <Input
                 type="text"
@@ -260,7 +258,7 @@ const AddPartyMaster = () => {
           </div>
           <div className="text-center relative">
           {additionalPhone && (
-            <div className="flex w-[75%] ml-10 lg:w-[21%] lg:ml-[51%] mt-5 lg:mt-0 mb-3">
+            <div className="flex w-[70%] ml-19 lg:w-[17%] lg:ml-[53%] mt-5 lg:mt-0 mb-3">
               <Input
                 {...register("additional_phone_no")}
                 type="text"
@@ -282,13 +280,13 @@ const AddPartyMaster = () => {
             </div>
           )}
           <div className="">
-            <Button type="button" className="lg:ml-48" onClick={() => setadditionalPhone(true)}>
+            <Button type="button" className="lg:ml-64" onClick={() => setadditionalPhone(true)}>
               + Add Phone Number
             </Button>
           </div>
           </div>
           {/*second row*/}
-          <div className="mx-10 lg:flex gap-6 mt-3">
+          <div className="mx-10 xl:flex justify-around gap-6 mt-3">
             <div className="grid gap-2">
               <Label htmlFor="">Contact Person</Label>
               <Input
@@ -337,7 +335,7 @@ const AddPartyMaster = () => {
             </div>
           </div>
           {/*third*/}
-          <div className="mx-10 lg:flex gap-6 mt-3">
+          <div className="mx-10 xl:flex justify-around gap-6 mt-3">
             <div className="grid gap-2 items-center">
               <Label htmlFor="">Country *</Label>
               <Input
@@ -404,20 +402,20 @@ const AddPartyMaster = () => {
             </div>
           </div>
           {/*fourth*/}
-          <div className="mx-10 lg:flex gap-6 mt-3">
+          <div className="mx-10 xl:flex mt-5 gap-20 justify-around">
             <div className="grid gap-2 ">
               <Label htmlFor="">Discount </Label>
               <Input
                 type="text"
                 {...register("discount")}
-                className="outline  focus:ring-4 ring-blue-700 transition duration-300 rounded"
+                className="outline focus:ring-4 w-full ring-blue-700 transition duration-300 rounded"
               />
               {errors.discount && (
                 <div className="text-red-500">{errors.discount.message}</div>
               )}
             </div>
 
-            <div className="grid gap-2 mt-">
+            <div className="grid gap-2">
               <Label htmlFor="">Additional Rate </Label>
               <Input
                 type="text"
@@ -463,7 +461,7 @@ const AddPartyMaster = () => {
             </div>
           </div>
           {/*fifth*/}
-          <div className=" w-52 mt-3">
+          <div className="w-52 mt-5 ml-6">
             <div className="grid gap-2">
               <Label htmlFor="" className="ml-10">Source *</Label>
               <Input

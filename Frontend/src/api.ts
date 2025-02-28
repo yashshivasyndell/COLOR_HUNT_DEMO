@@ -250,6 +250,7 @@ const addInward = (payload:object):Promise<apiResponse>=>post<apiResponse>(`/mas
 const fetchinwardTable = ():Promise<apiResponse>=>get<apiResponse>("/master/inward/fetchtable")
 const deleteWholeInward = (id:number):Promise<apiResponse>=>post<apiResponse>(`/master/inward/deletewholeinward/${id}`,{})
 const fetchSingleInwardTable = (id:String):Promise<apiResponse>=>post<apiResponse>(`/master/inward/fetchSingleInwardTable`,id)
+const getSingleInwardDetails = (id:String):Promise<apiResponse>=>post<apiResponse>(`/master/inward/fetchSingleInwardDetails/`,id) 
 
 export {
   login,
@@ -337,5 +338,6 @@ export {
   addInward,
   fetchinwardTable,
   deleteWholeInward,
-  fetchSingleInwardTable
+  fetchSingleInwardTable,
+  getSingleInwardDetails
 };

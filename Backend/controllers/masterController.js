@@ -2083,13 +2083,13 @@ const deleteParty = asyncHandler(async (req, res, next) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-
+    
     if (!id) {
       return res.status(400).json(new ApiError(400, "Party id is required"));
     }
 
     const { rows } = await client.query(
-      "UPDATE party SET user_id = null WHERE user_id = $1 RETURNING *",
+      "DELETE FROM PARTY WHERE ID = $1 returning *",
       [id]
     );
 

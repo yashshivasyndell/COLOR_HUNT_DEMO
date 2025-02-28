@@ -55,7 +55,7 @@ const Inward = () => {
   const handleUpdateInward = async (id:any)=>{
     const strId = JSON.stringify({id:id})
     const UpdateInward = await fetchSingleInwardTable(strId)
-    console.log('object',UpdateInward);
+    console.log('id lelo',UpdateInward);
     localStorage.setItem("inwardData", JSON.stringify(UpdateInward));
     navigate('/add-inward')
   }

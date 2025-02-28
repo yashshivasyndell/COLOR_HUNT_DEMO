@@ -31,8 +31,10 @@ import {
   fetchArticleDetails,
   fetcharticles,
   fetchColor,
+  fetchSingleInwardTable,
   fetchSize,
   fetchvendors,
+  getSingleInwardDetails,
 } from "../../../api";
 import { useEffect, useState } from "react";
 import {  useNavigate } from "react-router-dom";
@@ -40,6 +42,7 @@ import CustomToast from "../../../showToast";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../Table/data-table-column-header";
 import { DataTable } from "../Table/data-table";
+import { validateHeaderName } from "http";
 
 const Add_inward = () => {
   const navigate = useNavigate()
@@ -99,9 +102,7 @@ const Add_inward = () => {
       sub_category: "",
       color_quantity: [],
       no_of_peice:""
-    },
-    
-    mode: "onBlur",
+    }
   });
   
   const [vendor, SetVendor] = useState<any>([]);
@@ -157,7 +158,7 @@ const Add_inward = () => {
   const handleArticles = async(id:number)=>{
     const ArticleDetails = await fetchArticleDetails(id)
     const arrayA = ArticleDetails.data
-    console.log(arrayA);
+    
     const colorFlag = arrayA[0].colorflag
     if(colorFlag !== 1){
         SetColor([])
@@ -217,10 +218,12 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
    
    //GRN STATE
    const [grn,setGrn] = useState()
-
+   const [inw,setInw] = useState('ADD')
+   const [inward_id,setInward_id] = useState('')
   //Submit function
   const submit =async (data:any) => {
     const payload = {
+      inward_id,
       grn_number : sendingStr,
       inward_date : data.inward_date,
       remarks : data.remark,
@@ -243,6 +246,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
       setGrn(resp.data.whole_iwnard_number)
       CustomToast(200,"Inward added successfully")
       SetsendingStr("")
+      setInward_id(resp.data.inward_grn_number_id)
     }
     console.log("submit",payload);
     form.reset();
@@ -265,15 +269,52 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
     }, 0);
   };
 
+  
   const [table,setTable] = useState([])
   useEffect(() => {
     const array1 = localStorage.getItem("inwardData");
     if (array1) {
+      setInw('UPDATE')
+      SetsendingStr("")
       const newArr = JSON.parse(array1);
+      
       setTable(newArr.data); 
-      console.log("table",table); 
+      setGrn(newArr.data[0].po_number)
+      setInward_id(newArr.data[0].grn_id)
+      localStorage.removeItem('inwardData')
     }
   }, []);
+
+  //values
+  console.log('Errors',form.formState.errors);
+  //Edit and Get singleInward
+  const handleEditInward = async(id:number)=>{
+    try{
+      const strId = JSON.stringify({id:id})
+      const res = await getSingleInwardDetails(strId)
+      console.log('det',res);
+      res.data.map((val:any)=>{
+        form.reset({
+          inward_date: val.inward_date ? new Date(val.inward_date) : undefined,
+          remark:val.remarks,
+          supplier:val.inward_vendor_name,
+          article_no:val.article_id,
+          color:val.color_details || [],
+          ratio:val.ratio_details ? val.ratio_details.join(", ") : "",
+          size:val.size_details,
+          stock_ratio:val.stock_ratio_mob,
+          weight:val.weight,
+          color_quantity:val.ratio_details,
+          no_of_peice:val.num_packs 
+      }),
+      setSelectedColors(val.color_details)
+      setSelectedSizes(val.size_details) 
+    }
+      )
+    }catch(error){
+        console.log('Error',error);
+    }
+  }
   //Single Inward Table  
   interface SingleInward{
     no:number,
@@ -326,7 +367,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
               <Trash2 />
             </div>
             <div className="p-1 cursor-pointer">
-              <PenBox  />
+              <PenBox  onClick={()=>handleEditInward(data.id)}/>
             </div>
           </div>
         );
@@ -349,7 +390,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
     <div>
       <Card>
         <CardHeader className="flex flex-row justify-between">
-          <span className="text-3xl">INWARD</span>
+          <span className="text-3xl bg-gray-500 p-1 rounded-full flex items-center">{inw} - INWARD</span>
           <span className="text-3xl bg-gray-500 p-1 rounded-full">GRN-NO {grn}</span>
         </CardHeader>
         <hr />
@@ -427,7 +468,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger className="w-full lg:w-52 p-5 text-lg">
-                        <SelectValue placeholder="SELECT SUPPLIER" />
+                        <SelectValue placeholder="SELECT SUPPLIER" defaultValue={field.value}/>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
@@ -450,7 +491,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
               />
             </div>
             {/*Second row*/}
-            <div className="grid gap-3 lg:flex lg:gap-14 p-5">
+            <div className="grid lg:grid-cols-2 gap-3 xl:flex lg:gap-14 p-5 ">
               {/*Article*/}
               <FormField
                 control={form.control}
@@ -470,7 +511,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                         <FormLabel className="block ml-1 mb-1">
                           ARTICLE <span className="text-red-500">*</span>
                         </FormLabel>
-                        <SelectTrigger className="w-full lg:w-60 p-5 text-lg">
+                        <SelectTrigger className="w-full lg:w-full xl:w-60 p-5 text-lg">
                           <SelectValue placeholder="SELECT ARTICLES" />
                         </SelectTrigger>
                         <SelectContent>
@@ -504,7 +545,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5"
+                      className="bg-gray-500 xl:w-60 cursor-not-allowed p-5"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -563,7 +604,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
               />
             </div>
             {/*Third row*/}
-            <div className="grid gap-3 lg:flex lg:gap-14 p-5">
+            <div className="grid lg:grid-cols-2 gap-3 xl:flex lg:gap-14 p-5">
               {/*Color*/}
               <FormField
                 control={form.control}
@@ -574,13 +615,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                       COLOR <span className="text-red-500">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full lg:w-60 p-5 text-lg">
+                      <SelectTrigger className="w-full xl:w-60 lg:w-full p-5 text-lg">
                         {selectedColors.length > 0 ? (
                           <div className="flex gap-1">
                             {selectedColors.slice(0, 2).map((color) => (
                               <span
                                 key={color.id}
-                                className="px-2 py-1 bg-blue-500 text-white rounded-md text-sm cursor-pointer"
+                                className="px-4 py-1 bg-green-500 text-white rounded-md text-sm cursor-pointer"
                                 onClick={() => handleColorSelect(color)}
                               >
                                 {color.name}
@@ -637,13 +678,13 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                       SIZE <span className="text-red-500">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full lg:w-56 p-5 text-lg">
+                      <SelectTrigger className="w-full xl:w-60 lg:w-full p-5 text-lg">
                         {selectedSizes.length > 0 ? (
                           <div className="flex gap-1">
                             {selectedSizes.slice(0, 3).map((size) => (
                               <span
                                 key={size.id}
-                                className="px-1 py-1 bg-blue-500 text-white rounded-md text-sm cursor-pointer"
+                                className="px-5 py-1 bg-green-500 text-white rounded-md text-sm cursor-pointer"
                                 onClick={() => handleSizeSelect(size)}
                               >
                                 {size.name}
@@ -753,7 +794,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
               />
             </div>
             {/*fourth row*/}
-            <div className="grid gap-3 lg:flex lg:gap-14 p-5">
+            <div className="grid lg:grid-cols-2 gap-3 xl:flex lg:gap-14 p-5">
               <FormField
                 control={form.control}
                 name="style_desc"
@@ -765,7 +806,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-60"
+                      className="bg-gray-500 xl:w-60 cursor-not-allowed p-5 "
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -782,7 +823,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 xl:w-60 cursor-not-allowed p-5 "
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -799,7 +840,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 xl:w-56 cursor-not-allowed p-5 "
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -816,7 +857,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-56"
+                      className="bg-gray-500 cursor-not-allowed p-5"
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -833,7 +874,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                     <Input
                       {...field}
                       disabled
-                      className="bg-gray-500 cursor-not-allowed p-5 lg:w-52"
+                      className="bg-gray-500 cursor-not-allowed p-5 "
                     ></Input>
                     <FormMessage />
                   </FormItem>
@@ -841,7 +882,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
               />
             </div>
             {/*fifth row*/}
-            <div className="grid gap-3 lg:flex lg:gap-14 p-5">
+            <div className="grid gap-3 xl:flex flex-wrap lg:gap-14 p-5">
             {noOfpeices && 
               <FormField
                 control={form.control}
@@ -890,7 +931,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
             </div>
 
             {/*BUTTONS row*/}
-            <div className=" lg:flex  lg:justify-between p-5">
+            <div className=" lg:flex justify-between lg:justify-between p-5">
               <div>
                 <Button
                   type="submit"
@@ -899,7 +940,7 @@ const handleSizeSelect = (size: { id: number; name: string }) => {
                   Submit
                 </Button>
               </div>
-              <div className="flex gap-5">
+              <div className="flex gap-5 justify-between">
                 <Button
                   type="button"
                   onClick={()=>navigate('/inward')}

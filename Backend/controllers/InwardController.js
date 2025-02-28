@@ -74,7 +74,7 @@ const addInward = async (req, res) => {
       if (color_list && color_list.length) {
         color_list.map(async (val) => {
           await client.query(
-            "INSERT INTO ARTICLE_COLOR (ARTICLE_ID,COLOR_ID,COLOR_NAME) VALUES ($1,$2,$3) RETURNING *",
+            "INSERT INTO INWARD_ARTICLE_COLOR (ARTICLE_ID,COLOR_ID,COLOR_NAME) VALUES ($1,$2,$3) RETURNING *",
             [article_id, val.id, val.name]
           );
         });
@@ -83,11 +83,11 @@ const addInward = async (req, res) => {
       if (size_list && size_list.length) {
         size_list.map(async (val, idx) => {
           await client.query(
-            "INSERT INTO ARTICLE_SIZE (ARTICLE_ID,SIZE_ID,SIZE_NAME) VALUES ($1,$2,$3) RETURNING *",
+            "INSERT INTO INWARD_ARTICLE_SIZE (ARTICLE_ID,SIZE_ID,SIZE_NAME) VALUES ($1,$2,$3) RETURNING *",
             [article_id, val.id, val.name]
           );
           await client.query(
-            "INSERT INTO ARTICLE_RATIO (ARTICLE_ID,ARTICLE_SIZE_ID,ARTICLE_RATIO) VALUES($1,$2,$3) RETURNING *",
+            "INSERT INTO INWARD_ARTICLE_RATIO (ARTICLE_ID,ARTICLE_SIZE_ID,ARTICLE_RATIO) VALUES($1,$2,$3) RETURNING *",
             [article_id, val.id, getRatio[idx]]
           );
         });
@@ -129,7 +129,7 @@ const addInward = async (req, res) => {
       }
 
       const { rows: inward } = await client.query(
-        "INSERT INTO inward (inward_date, article_id, num_packs, inward_grn_id, weight, sales_num_packs,final_total_set_quantity) VALUES ($1, $2, $3, $4, $5, $6,$7) RETURNING *",
+        "INSERT INTO inward (inward_date, article_id, num_packs, inward_grn_id, weight, sales_num_packs,final_total_set_quantity,stock_ratio_mob) VALUES ($1, $2, $3, $4, $5, $6,$7,$8) RETURNING *",
         [
           inward_date,
           article_id,
@@ -137,10 +137,11 @@ const addInward = async (req, res) => {
           inwardGrn[0].id,
           weight,
           num_packs,
-          final_total_set_quantity
+          final_total_set_quantity,
+          stock_ratio_mobile
         ]
       );
-
+       
       if (inward.length) {
         await client.query("COMMIT");
         return res.status(200).json(
@@ -155,11 +156,146 @@ const addInward = async (req, res) => {
           )
         );
       }
+    }else{
+     //if article is same its time to update inward
+     try{
+       const {
+        grn_number,
+        inward_date,
+        remarks,
+        vendor_id,
+        article_id,
+        po_id,
+        color_list,
+        size_list,
+        ratio,
+        stock_ratio_mobile,
+        weight,
+        num_packs,
+        inward_id
+      } = req.body;
+         
+         const { rows: articleInfo } = await client.query(
+          "SELECT c.colorflag FROM articles a JOIN category c ON c.id = a.category_id WHERE a.id = $1",
+          [article_id]
+        );
+         //Checking if same article is sent again if yes update else add new article in grn no.
+         const {rows:existingArticle} = await client.query(`
+          SELECT ARTICLE_ID FROM INWARD WHERE INWARD_GRN_ID = $1
+          `,[inward_id])
+
+          
+          const articleId = existingArticle[0].article_id;
+          //Updating Inward Date ,Remarks, supplier,stock ratio mobile,weight and num_packs
+          //total set quantity calculation
+          const rationSum = ratio
+            .split(",")
+            .reduce((acc, val) => acc + Number(val), 0);
+          const packsSum = num_packs
+            .split(",")
+            .reduce((acc, val) => acc + Number(val), 0);
+          const colorSum = color_list.length;
+
+          let final_total_set_quantity = 0;
+          if (articleInfo.length) {
+            if (articleInfo[0].colorflag === 0) {
+              final_total_set_quantity = packsSum * (rationSum * colorSum);
+            } else {
+              final_total_set_quantity = packsSum * rationSum;
+            }
+          }
+          const { rows: updatedInward } = await client.query(
+            `
+               UPDATE INWARD SET INWARD_DATE = $1,NUM_PACKS=$2,WEIGHT = $3,SALES_NUM_PACKS=$4,
+               FINAL_TOTAL_SET_QUANTITY=$5,STOCK_RATIO_MOB=$6
+               WHERE ARTICLE_ID = $7 RETURNING *
+            `,
+            [inward_date, num_packs, weight,num_packs,final_total_set_quantity,
+              stock_ratio_mobile,article_id]
+          );
+          console.log('col_list',color_list);
+          // H E R E    A R T I C L E   I S  S A M E    SO   UPDATE INWARD
+          if(existingArticle.length > 0){
+            //Update Color
+            color_list.map(async (val)=>{
+              const {rows:updatedColors} = await client.query(`
+                UPDATE INWARD_ARTICLE_COLOR 
+                SET COLOR_ID = $1,COLOR_NAME=$2
+                WHERE ARTICLE_ID = $3 AND COLOR_ID = $4
+                `,[val.id,val.name,articleId,val.id])
+            })
+            //Update size and Ratio
+            const getUpdateRatio = ratio.split(",");
+            if (size_list && size_list.length) {
+              size_list.map(async (val, idx) => {
+                await client.query(
+                  `UPDATE INWARD_ARTICLE_SIZE SET SIZE_ID = $1 ,SIZE_NAME = $2
+                  WHERE ARTICLE_ID = $3 AND SIZE_ID = $4`,[val.id,val.name,articleId,val.id]
+                );
+                await client.query(
+                  `UPDATE INWARD_ARTICLE_RATIO SET ARTICLE_SIZE_ID = $1,ARTICLE_RATIO = $2
+                  WHERE ARTICLE_ID = $3 AND ARTICLE_SIZE_ID = $4`,
+                  [val.id,getUpdateRatio[idx],articleId,val.id]
+                );
+              });
+            }
+            
+            //If all updated without error 
+            return res.status(200).json(new ApiResponse(200,'Successfully updated inward'))
+
+          }else{
+            //Adding Multiple article in same INWARD
+            try{
+              //Adding C O L O R S
+              color_list.map(async(val)=>{
+                const {rows:updateColor} = await client.query(`
+                  INSERT INTO INWARD_ARTICLE_COLOR ARTICLE_ID,COLOR_ID,COLOR_NAME VALUES ($1,$2,$3)
+                  RETURNING *
+                  `,[val.id,val.name,article_id])
+              })
+              // adding  S I Z E   &&   R A T I O
+              const getUpdateRatio = ratio.split(",");
+            if (size_list && size_list.length) {
+              size_list.map(async (val, idx) => {
+                await client.query(
+                  `INSERT INTO INWARD_ARTICLE_SIZE ARTICLE_ID, SIZE_ID,
+                  SIZE_NAME VALUES ($1,$2,$3)
+                  `,[val.id,val.name,articleId]
+                );
+                await client.query(
+                  `INSERT INTO INWARD_ARTICLE_RATIO ARTICLE_ID,ARTICLE_SIZE_ID,ARTICLE_RATIO
+                  VALUES ($1,$2,$3)
+                  `,
+                  [articleId,val.id,getUpdateRatio[idx]]
+                );
+              });
+            }
+            
+              const {rows:addNewArticleInInward} = await client.query(`
+                 INSERT INTO INWARD INWARD_DATE,ARTICLE_ID,
+                 NUM_PACKS,INWARD_GRN_ID,WEIGHT,SALES_NUM_PACKS,
+                 FINAL_TOTAL_SET_QUANTITY,STOCK_RATIO_MOB
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *
+              `,[inward_date,article_id,num_packs,inward_id,weight,
+                num_packs,final_total_set_quantity,stock_ratio_mobile])
+
+                if(addNewArticleInInward.length > 0){
+                  return res.status(200).json(new ApiResponse(200,addNewArticleInInward,'Successfully added new article in same inward'))
+                }}catch(error){
+                  console.log('Error in add article in same inward api',error);
+                  return res.status(500).json(new ApiError(500,'Error in add article in same inward api',error))
+                }
+          }
+    }catch(error){
+      console.log("Error in adding color and all things in adding article in inward",error);
+           return res.status(500).json(new ApiError(500,'Error in updating inward of existing article',error))
+    }
+    //if article is also changed then add new article in this inward in put a new entry in database
     }
    
     return res
         .status(400)
-        .json(new ApiError(400, "Failed to insert Inward GRN Number",error));
+        .json(new ApiError(400, "Failed to insert Inward GRN Number",error?.message));
 
   } catch (error) {
     console.log("Error: ", error);
@@ -280,13 +416,13 @@ const deleteWholeInward = async (req, res) => {
 
     // Delete operations
     
-    await client.query('DELETE FROM ARTICLE_COLOR WHERE ARTICLE_ID = $1', [a_id]);
+    await client.query('DELETE FROM INWARD_ARTICLE_COLOR WHERE ARTICLE_ID = $1', [a_id]);
 
   
-    await client.query('DELETE FROM ARTICLE_SIZE WHERE ARTICLE_ID = $1', [a_id]);
+    await client.query('DELETE FROM INWARD_ARTICLE_SIZE WHERE ARTICLE_ID = $1', [a_id]);
 
     
-    await client.query('DELETE FROM ARTICLE_RATIO WHERE ARTICLE_ID = $1', [a_id]);
+    await client.query('DELETE FROM INWARD_ARTICLE_RATIO WHERE ARTICLE_ID = $1', [a_id]);
 
     
     await client.query(`DELETE FROM INWARD_ARTICLE WHERE ARTICLE_ID = $1`, [a_id]);
@@ -350,35 +486,97 @@ try{
 //Get single inward
 const getSingleInwardDetails = async(req,res)=>{
   const client = await pool.connect()
+  const {id} = req.body
   try{
-    const {row:details} = await client.query(`
-      
-      `)
-  }catch(error){
+    const {rows:details} = await client.query(`
+      SELECT DISTINCT ON (I.ID) 
+    I.ID, 
+    I.INWARD_DATE,
+    I.STOCK_RATIO_MOB,
+    IG.REMARKS,
+    V1.id AS INWARD_VENDOR_NAME,  
+    A.ID AS ARTICLE_ID,
+    PN.PO_FY,
+    POD.NUM_PACKS,
+    C.COLORFLAG,
+    C.NAME AS CATEGORY,
+    V2.id AS PO_VENDOR_NAME,  
+	  B.NAME AS BRAND_NAME,
+	  SB.NAME AS SUBCATEGORY,
+	  RS.SERIES_NAME SERIES_NAME,
+    COALESCE(COLOR_DETAILS.COLOR_LIST, '[]') AS COLOR_DETAILS,
+    COALESCE(SIZE_DETAILS.SIZE_LIST, '[]') AS SIZE_DETAILS,
+    COALESCE(RATIO_DETAILS.RATIO_LIST, '[]') AS RATIO_DETAILS,
+    I.WEIGHT,
+    A.STYLE_DESCRIPTION
+    
+    FROM INWARD I
+    LEFT JOIN ARTICLES A ON I.ARTICLE_ID = A.ID
+    LEFT JOIN INWARD_GRN IG ON I.INWARD_GRN_ID = IG.ID
+    LEFT JOIN VENDOR V1 ON IG.VENDOR_ID = V1.ID  
+    LEFT JOIN INWARD_ARTICLE IA ON I.ARTICLE_ID = IA.ARTICLE_ID
+    LEFT JOIN PURCHASE_ORDER_DETAILS POD ON I.ARTICLE_ID = POD.ARTICLE_ID
+    LEFT JOIN PURCHASE_NUMBER PN ON PN.ID = POD.PO_NUMBER_ID  
+    LEFT JOIN VENDOR V2 ON PN.VENDOR_ID = V2.ID  
+    LEFT JOIN CATEGORY C ON A.CATEGORY_ID = C.ID
+    LEFT JOIN BRAND B ON B.ID = A.BRAND_ID
+    LEFT JOIN RANGESERIES RS ON RS.ID = A.SERIES_ID
+    LEFT JOIN SUBCATEGORY SB ON SB.ID = A.SUBCATEGORY_ID
 
+    LEFT JOIN (
+    SELECT 
+        AC.ARTICLE_ID, 
+        jsonb_agg(jsonb_build_object('id', AC.COLOR_ID, 'name', AC.COLOR_NAME)) AS COLOR_LIST
+    FROM INWARD_ARTICLE_COLOR AC
+    GROUP BY AC.ARTICLE_ID
+) COLOR_DETAILS ON COLOR_DETAILS.ARTICLE_ID = I.ARTICLE_ID
+
+LEFT JOIN (
+    SELECT 
+        ARS.ARTICLE_ID, 
+        jsonb_agg(jsonb_build_object('id', ARS.SIZE_ID, 'name', ARS.SIZE_NAME)) AS SIZE_LIST
+    FROM INWARD_ARTICLE_SIZE ARS
+    GROUP BY ARS.ARTICLE_ID
+) SIZE_DETAILS ON SIZE_DETAILS.ARTICLE_ID = I.ARTICLE_ID
+
+LEFT JOIN (
+    SELECT 
+        AR.ARTICLE_ID, 
+        jsonb_agg(AR.ARTICLE_RATIO) AS RATIO_LIST
+    FROM INWARD_ARTICLE_RATIO AR
+    GROUP BY AR.ARTICLE_ID
+) RATIO_DETAILS ON RATIO_DETAILS.ARTICLE_ID = I.ARTICLE_ID
+           where I.ID = $1`,[id])
+           
+    return res.status(200).json(new ApiResponse(200,details,'Successfully fetched SingleInward details'))
+  }catch(error){
+      console.log('Error in single inw',error);
+      return res.status(500).json(new ApiError(500,'Error in catch of singleInward',error))
   }finally{
     client.release()
   }
 }
-//Update Inward 
-const udateInward = async(req,res) =>{
-  const client = await pool.connect()
-  try{
-      const {id} = req.body
-      const {row:updateInw} = await client.query(`
+
+// Update Inward 
+// const udateInward = async(req,res) =>{
+//   const client = await pool.connect()
+//   try{
+//       const {id} = req.body
+//       const {row:updateInw} = await client.query(`
         
-        `)
-  }catch(error){
+//         `)
+//   }catch(error){
 
-  }finally{
-    client.release()
-  }
-}
+//   }finally{
+//     client.release()
+//   }
+// }
 
 module.exports = {
   fetchArticleDetails,
   addInward,
   fetchInwardTable,
   deleteWholeInward,
-  getSingleInwardTable
+  getSingleInwardTable,
+  getSingleInwardDetails
 };

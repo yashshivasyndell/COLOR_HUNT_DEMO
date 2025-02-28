@@ -82,7 +82,7 @@ const {
   deletePoNumber,
   editPODtable,
 } = require("../controllers/masterController");
-const { fetchArticleDetails, addInward, fetchInwardTable, deleteWholeInward, getSingleInwardTable } = require("../controllers/InwardController");
+const { fetchArticleDetails, addInward, fetchInwardTable, deleteWholeInward, getSingleInwardTable, udateInward, getSingleInwardDetails } = require("../controllers/InwardController");
 const masterRouter = express.Router();
 
 masterRouter.get("/getSalesPersons", verifyToken,getSalesPersons);
@@ -247,6 +247,7 @@ masterRouter.post("/inward/addinward",addInward)
 masterRouter.get("/inward/fetchtable",fetchInwardTable)
 masterRouter.post("/inward/deletewholeinward/:id",deleteWholeInward)
 masterRouter.post("/inward/fetchSingleInwardTable",getSingleInwardTable)
+masterRouter.post("/inward/fetchSingleInwardDetails",getSingleInwardDetails)
 
 
 module.exports = masterRouter;
